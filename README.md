@@ -12,6 +12,7 @@ React + TypeScript + Vite + Tailwind CSS 前端开发仓库。
   - 可全屏放映，也可逐帧导出视频（Chrome / Edge 导出 MP4，不支持 AAC 编码的浏览器导出 WebM）。
   - 公式用 MathJax 预渲染成 SVG（`src/ns-blowup/formulas.gen.ts`），改公式后运行 `npm run formulas` 重新生成。
   - 片中事实的出处列在 `src/ns-blowup/content.ts` 的 `SOURCES` 和页面底部。
+  - 构建开关：`VITE_PREVIEW_ONLY=1` 隐藏导出（用于不能保存文件的预览环境）；`VITE_PRELOAD_AUDIO=<相对地址>`（可配 `VITE_PRELOAD_AUDIO_NAME`）让页面打开时自动载入该音频。音乐文件有版权，不要提交进仓库。
 
 ## 本地运行
 

@@ -28,6 +28,10 @@ const SCENE_NAMES: Record<SceneId, string> = {
 /** 在不能下载文件的环境（如内嵌预览）里构建时设为 1，隐藏导出功能 */
 const PREVIEW_ONLY = import.meta.env.VITE_PREVIEW_ONLY === '1'
 
+/** 构建时预置的音乐文件（相对页面的地址）与显示名；不设则需要用户自己选择文件 */
+const PRELOAD_AUDIO: string = import.meta.env.VITE_PRELOAD_AUDIO ?? ''
+const PRELOAD_NAME: string = import.meta.env.VITE_PRELOAD_AUDIO_NAME ?? '预置音乐'
+
 /** 没有载入音乐时的无声预览 */
 const PREVIEW = syntheticAnalysis()
 
@@ -200,28 +204,46 @@ export default function Player() {
     return () => window.removeEventListener('keydown', onKey)
   }, [engine, seek, toggleFull, togglePlay])
 
-  const onFile = async (file: File) => {
-    setBusy(true)
-    engine.pause()
-    setPlaying(false)
-    try {
-      setStatus('正在解码音频…')
-      const buf = await engine.decode(await file.arrayBuffer())
-      setStatus('正在分析节拍与段落…')
-      const a = await analyzeAudio(buf, (p) => setStatus(`正在分析节拍与段落… ${Math.round(p * 100)}%`))
-      engine.setBuffer(buf, buf.duration)
-      setAudioBuf(buf)
-      setFileName(file.name)
-      setOverride(loadCuts(cutsKey(file.name, buf.duration)))
-      setAnalysis(a)
-      setTime(0)
-      setStatus(`时长 ${fmt(buf.duration)} · 速度约 ${Math.round(a.bpm)} BPM · ${a.onsets.length} 个起音 · ${a.sections.length} 处段落变化`)
-    } catch (e) {
-      setStatus(`载入失败：${e instanceof Error ? e.message : String(e)}`)
-    } finally {
-      setBusy(false)
-    }
-  }
+  const loadAudio = useCallback(
+    async (name: string, read: () => Promise<ArrayBuffer>) => {
+      setBusy(true)
+      engine.pause()
+      setPlaying(false)
+      try {
+        setStatus('正在解码音频…')
+        const buf = await engine.decode(await read())
+        setStatus('正在分析节拍与段落…')
+        const a = await analyzeAudio(buf, (p) => setStatus(`正在分析节拍与段落… ${Math.round(p * 100)}%`))
+        engine.setBuffer(buf, buf.duration)
+        setAudioBuf(buf)
+        setFileName(name)
+        setOverride(loadCuts(cutsKey(name, buf.duration)))
+        setAnalysis(a)
+        setTime(0)
+        setStatus(`时长 ${fmt(buf.duration)} · 速度约 ${Math.round(a.bpm)} BPM · ${a.onsets.length} 个起音 · ${a.sections.length} 处段落变化`)
+      } catch (e) {
+        setStatus(`载入失败：${e instanceof Error ? e.message : String(e)}`)
+      } finally {
+        setBusy(false)
+      }
+    },
+    [engine],
+  )
+
+  const onFile = (file: File) => loadAudio(file.name, () => file.arrayBuffer())
+
+  // 构建时预置了音乐（VITE_PRELOAD_AUDIO）就自动载入，免去手动选文件
+  useEffect(() => {
+    if (!PRELOAD_AUDIO) return
+    const timer = window.setTimeout(() => {
+      void loadAudio(PRELOAD_NAME, async () => {
+        const res = await fetch(PRELOAD_AUDIO)
+        if (!res.ok) throw new Error(`预置音乐读取失败（HTTP ${res.status}）`)
+        return res.arrayBuffer()
+      })
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [loadAudio])
 
   const updateCuts = (next: number[] | null) => {
     setOverride(next)
@@ -350,7 +372,9 @@ export default function Player() {
           <section className="rounded-lg p-5 ring-1 ring-white/10">
             <h2 className="text-base font-semibold text-[#ece8df]">1. 载入音乐</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-400">
-              选择你合法持有的 ハイスイノナサ「地下鉄の動態」音频文件（MP3 / AAC / WAV / FLAC 等）。本页面不附带、也不上传任何音乐，分析全部在本机浏览器里完成。
+              {PRELOAD_AUDIO
+                ? `这个页面已预置 ${PRELOAD_NAME}，打开后自动载入并分析节拍，直接点播放即可。也可以换成别的音频文件。`
+                : '选择你合法持有的 ハイスイノナサ「地下鉄の動態」音频文件（MP3 / AAC / WAV / FLAC 等）。本页面不附带、也不上传任何音乐，分析全部在本机浏览器里完成。'}
             </p>
             <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-200 ring-1 ring-white/20 transition hover:bg-white/5">
               <input

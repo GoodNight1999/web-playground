@@ -30,6 +30,8 @@ export type SceneSpec = {
   minGap: number
   /** 这个 cue 取场景内 [from, to] 区间最强的起音，用作高潮点 */
   accent?: { cue: number; from: number; to: number }
+  /** 第一个 cue 就在场景开头（切点本身就是重拍时用） */
+  firstCueAtStart?: boolean
   marker?: Bi
   subs: Sub[]
   /** 背景流线的不透明度 */
@@ -54,6 +56,7 @@ export const SCENES: SceneSpec[] = [
     weight: 4,
     cues: 2,
     minGap: 1.2,
+    firstCueAtStart: true,
     flow: 0.55,
     subs: [],
   },

@@ -371,13 +371,17 @@ function detectSections(
     }
     nov[b] = Math.sqrt(dist)
   }
-  let max = 0
-  for (const v of nov) max = Math.max(max, v)
+  const isPeak = (b: number) => {
+    for (let k = Math.max(0, b - 4); k <= Math.min(nb - 1, b + 4); k++) if (nov[k] > nov[b]) return false
+    return true
+  }
+  // 用峰值的 90 分位做参照，避免结尾淡出这类单个极大值把其他段落变化压下去
+  const peaks: number[] = []
+  for (let b = W; b < nb - W; b++) if (isPeak(b)) peaks.push(nov[b])
+  const ref = percentile(peaks, 0.9) || 1
   const out: Onset[] = []
   for (let b = W; b < nb - W; b++) {
-    let isMax = true
-    for (let k = Math.max(0, b - 4); k <= Math.min(nb - 1, b + 4); k++) if (nov[k] > nov[b]) isMax = false
-    if (!isMax || nov[b] < 0.25 * max) continue
+    if (!isPeak(b) || nov[b] < 0.35 * ref) continue
     // 对齐到附近最强的起音
     const t0 = (b * block) / fps
     let bestT = t0
@@ -390,7 +394,7 @@ function detectSections(
         bestT = o.t
       }
     }
-    out.push({ t: bestT, s: nov[b] / (max || 1) })
+    out.push({ t: bestT, s: Math.min(1, nov[b] / ref) })
   }
   return out
 }
