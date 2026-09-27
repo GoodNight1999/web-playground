@@ -25,6 +25,9 @@ const SCENE_NAMES: Record<SceneId, string> = {
   end: '片尾',
 }
 
+/** 在不能下载文件的环境（如内嵌预览）里构建时设为 1，隐藏导出功能 */
+const PREVIEW_ONLY = import.meta.env.VITE_PREVIEW_ONLY === '1'
+
 /** 没有载入音乐时的无声预览 */
 const PREVIEW = syntheticAnalysis()
 
@@ -77,6 +80,8 @@ export default function Player() {
   const [fps, setFps] = useState(60)
   const [exportProgress, setExportProgress] = useState<number | null>(null)
   const [isFull, setIsFull] = useState(false)
+  // 手机（尤其 iPhone）不支持元素全屏，退回到铺满视口的放映模式
+  const [pseudoFull, setPseudoFull] = useState(false)
   const [idle, setIdle] = useState(false)
 
   const timeline = useMemo(() => planTimeline(analysis, override), [analysis, override])
@@ -142,9 +147,18 @@ export default function Player() {
   )
 
   const toggleFull = useCallback(() => {
-    if (document.fullscreenElement) void document.exitFullscreen()
-    else void stageRef.current?.requestFullscreen()
-  }, [])
+    if (document.fullscreenElement) {
+      void document.exitFullscreen()
+      return
+    }
+    if (pseudoFull) {
+      setPseudoFull(false)
+      return
+    }
+    const el = stageRef.current
+    if (el && typeof el.requestFullscreen === 'function') el.requestFullscreen().catch(() => setPseudoFull(true))
+    else setPseudoFull(true)
+  }, [pseudoFull])
 
   useEffect(() => {
     const onFs = () => setIsFull(Boolean(document.fullscreenElement))
@@ -154,7 +168,7 @@ export default function Player() {
 
   // 全屏时鼠标静止 2 秒自动隐藏
   useEffect(() => {
-    if (!isFull) return
+    if (!isFull && !pseudoFull) return
     let timer = window.setTimeout(() => setIdle(true), 2000)
     const onMove = () => {
       setIdle(false)
@@ -167,7 +181,7 @@ export default function Player() {
       window.removeEventListener('mousemove', onMove)
       setIdle(false)
     }
-  }, [isFull])
+  }, [isFull, pseudoFull])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -177,6 +191,7 @@ export default function Player() {
         e.preventDefault()
         void togglePlay()
       } else if (e.key === 'f' || e.key === 'F') toggleFull()
+      else if (e.key === 'Escape') setPseudoFull(false)
       else if (e.key === 'ArrowLeft') seek(engine.time() - 5)
       else if (e.key === 'ArrowRight') seek(engine.time() + 5)
       else if (e.key === 'Home') seek(0)
@@ -275,13 +290,23 @@ export default function Player() {
 
         <div
           ref={stageRef}
-          className={`relative aspect-video w-full overflow-hidden rounded-lg bg-black ring-1 ring-white/10 [&:fullscreen]:rounded-none [&:fullscreen]:ring-0 ${isFull && idle ? 'cursor-none' : ''}`}
+          className={`${pseudoFull ? 'fixed inset-0 z-50' : 'relative aspect-video w-full rounded-lg ring-1 ring-white/10'} overflow-hidden bg-black [&:fullscreen]:rounded-none [&:fullscreen]:ring-0 ${(isFull || pseudoFull) && idle ? 'cursor-none' : ''}`}
         >
           <canvas ref={canvasRef} className="h-full w-full object-contain" onClick={() => void togglePlay()} />
           {!ready && (
             <div className="absolute inset-0 grid place-items-center text-sm text-slate-400">
               {loadError ? `加载失败：${loadError}` : '正在加载字体与公式…'}
             </div>
+          )}
+          {pseudoFull && (
+            <button
+              type="button"
+              onClick={() => setPseudoFull(false)}
+              style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+              className={`absolute right-3 rounded-md bg-black/60 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-white/20 transition-opacity ${idle ? 'opacity-0' : 'opacity-100'}`}
+            >
+              退出放映
+            </button>
           )}
         </div>
 
@@ -317,7 +342,9 @@ export default function Player() {
             aria-label="进度"
           />
         </div>
-        <p className="mt-2 text-xs text-slate-500">快捷键：空格 播放/暂停 · F 全屏 · ← → 快退/快进 5 秒 · Home 回到开头</p>
+        <p className="mt-2 text-xs text-slate-500">
+          点画面也可播放/暂停。快捷键：空格 播放/暂停 · F 全屏 · ← → 快退/快进 5 秒 · Home 回到开头。手机上横屏观看效果更好。
+        </p>
 
         <div className="mt-8 grid gap-6 md:grid-cols-2">
           <section className="rounded-lg p-5 ring-1 ring-white/10">
@@ -344,6 +371,7 @@ export default function Player() {
             <p className="mt-3 text-xs leading-relaxed text-slate-500">
               在发布会等公开场合播放这首歌，需要取得相应的公开演奏/同步使用授权（日本地区一般经 JASRAC 或唱片公司）。
             </p>
+            <p className="mt-2 text-xs leading-relaxed text-slate-500">iPhone 上网页音频受静音开关控制，没有声音时请关闭静音模式。</p>
           </section>
 
           <section className="rounded-lg p-5 ring-1 ring-white/10">
@@ -351,47 +379,55 @@ export default function Player() {
             <p className="mt-2 text-sm leading-relaxed text-slate-400">
               逐帧离线渲染并编码为 1920×1080 视频（优先 MP4：H.264 + AAC；浏览器不支持 AAC 编码时导出 WebM）。导出耗时取决于电脑性能，期间请保持此标签页在前台。
             </p>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <label className="text-sm text-slate-300">
-                帧率{' '}
-                <select
-                  value={fps}
-                  onChange={(e) => setFps(Number(e.target.value))}
-                  disabled={exporting}
-                  className="ml-1 rounded bg-white/5 px-2 py-1 text-sm ring-1 ring-white/15"
-                >
-                  <option value={60}>60 fps</option>
-                  <option value={30}>30 fps</option>
-                </select>
-              </label>
-              {exporting ? (
-                <button
-                  type="button"
-                  onClick={() => abortRef.current?.abort()}
-                  className="rounded-md px-3 py-2 text-sm text-slate-200 ring-1 ring-white/20 hover:bg-white/5"
-                >
-                  取消导出
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => void onExport()}
-                  disabled={!ready || busy}
-                  className="rounded-md bg-[#d2b273] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#e0c48a] disabled:opacity-40"
-                >
-                  导出视频
-                </button>
-              )}
-            </div>
-            {exporting && (
-              <div className="mt-4">
-                <div className="h-1.5 overflow-hidden rounded bg-white/10">
-                  <div className="h-full bg-[#d2b273]" style={{ width: `${(exportProgress ?? 0) * 100}%` }} />
+            {PREVIEW_ONLY ? (
+              <p className="mt-3 text-sm leading-relaxed text-[#d2b273]">
+                这个预览版不能保存文件。导出请在电脑上用 Chrome 或 Edge 打开正式页面，或在本地运行项目。
+              </p>
+            ) : (
+              <>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <label className="text-sm text-slate-300">
+                    帧率{' '}
+                    <select
+                      value={fps}
+                      onChange={(e) => setFps(Number(e.target.value))}
+                      disabled={exporting}
+                      className="ml-1 rounded bg-white/5 px-2 py-1 text-sm ring-1 ring-white/15"
+                    >
+                      <option value={60}>60 fps</option>
+                      <option value={30}>30 fps</option>
+                    </select>
+                  </label>
+                  {exporting ? (
+                    <button
+                      type="button"
+                      onClick={() => abortRef.current?.abort()}
+                      className="rounded-md px-3 py-2 text-sm text-slate-200 ring-1 ring-white/20 hover:bg-white/5"
+                    >
+                      取消导出
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void onExport()}
+                      disabled={!ready || busy}
+                      className="rounded-md bg-[#d2b273] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#e0c48a] disabled:opacity-40"
+                    >
+                      导出视频
+                    </button>
+                  )}
                 </div>
-                <p className="mt-1 text-xs tabular-nums text-slate-400">{((exportProgress ?? 0) * 100).toFixed(1)}%</p>
-              </div>
+                {exporting && (
+                  <div className="mt-4">
+                    <div className="h-1.5 overflow-hidden rounded bg-white/10">
+                      <div className="h-full bg-[#d2b273]" style={{ width: `${(exportProgress ?? 0) * 100}%` }} />
+                    </div>
+                    <p className="mt-1 text-xs tabular-nums text-slate-400">{((exportProgress ?? 0) * 100).toFixed(1)}%</p>
+                  </div>
+                )}
+                {!audioBuf && <p className="mt-3 text-xs text-slate-500">未载入音乐时导出的是无声版本。</p>}
+              </>
             )}
-            {!audioBuf && <p className="mt-3 text-xs text-slate-500">未载入音乐时导出的是无声版本。</p>}
           </section>
 
           <section className="rounded-lg p-5 ring-1 ring-white/10 md:col-span-2">
