@@ -7,12 +7,12 @@ React + TypeScript + Vite + Tailwind CSS 前端开发仓库。
 ## 页面
 
 - 首页：`index.html`
-- [黎曼猜想](https://goodnight1999.github.io/web-playground/zeta/)：`zeta/index.html`，源码在 `src/zeta/`。配乐ハイスイノナサ「地下鉄の動態」的动态演示视频。
+- [希尔伯特第六问题](https://goodnight1999.github.io/web-playground/hilbert/)：`hilbert/index.html`，源码在 `src/hilbert/`。配乐ハイスイノナサ「地下鉄の動態」的动态演示视频，内容是 Deng–Hani–Ma 从硬球的牛顿力学经玻尔兹曼方程推导流体方程的工作（arXiv:2408.07818、arXiv:2503.01800），面向数学研究者。
   - 画面在 1920×1080 画布上实时渲染，黑白几何风格参考大西景太为原曲制作的 MV；每个起音对应一个几何体。
-  - 段落按原曲结构编排（`src/zeta/timeline.ts` 的 `SONG`）：用 librosa 做自相似矩阵与谱聚类、pYIN 找人声，得出前奏 0:00–0:53（14 小节，每小节 3.75 秒）、主歌 0:53、第二主题 1:25、副歌 1:54 / 2:09、歇息 2:24、第二次副歌 2:47 / 3:17、尾声 3:47。细到每一拍的事件在运行时吸附到分析出的起音上。
-  - ζ 函数在 `src/zeta/math/zeta.ts` 用 Borwein 加速级数与函数方程计算，已与 mpmath 对照（相对误差约 1e-13）；零点由 `scripts/compute-zeros.py`（mpmath）生成到 `src/zeta/data/zeros.gen.ts`。
-  - 公式用 MathJax 预渲染成 SVG（`src/zeta/formulas.gen.ts`），改公式后运行 `npm run formulas` 重新生成。
-  - 片中事实的出处列在 `src/zeta/content.ts` 的 `SOURCES` 和页面底部。
+  - 段落按原曲结构编排（`src/hilbert/timeline.ts` 的 `SONG`）：用 librosa 做自相似矩阵与谱聚类、pYIN 找人声，得出前奏 0:00–0:53（14 小节，每小节 3.75 秒）、主歌 0:53、第二主题 1:25、副歌 1:54 / 2:09、歇息 2:24、第二次副歌 2:47 / 3:17、尾声 3:47。细到每一拍的事件在运行时吸附到分析出的起音上。
+  - 真实计算（`src/hilbert/math/`）：`hardspheres.ts` 是 T² 上硬球的事件驱动模拟（精确碰撞时刻、弹性碰撞律，能量守恒到机器精度）；`molecule.ts` 把末时刻两个粒子的碰撞历史约化成分子，并给出一个合法的自上而下切割序列（{4}/{3}/{2}/{33}）；`flow.ts` 是不可压 NSF 在 T² 上的精确解（|k|² = 25 的本征模叠加）及其流线。模拟的种子与根粒子在 `src/hilbert/render/visuals.ts` 的 `GAS_A` 里。
+  - 公式用 MathJax 预渲染成 SVG（`src/hilbert/formulas.gen.ts`），改公式后运行 `npm run formulas` 重新生成。
+  - 片中事实的出处列在 `src/hilbert/content.ts` 的 `SOURCES` 和页面底部。
   - 可全屏放映，也可逐帧导出视频（Chrome / Edge 导出 MP4，不支持 AAC 编码的浏览器导出 WebM）。页面不附带音乐。
   - 构建开关：`VITE_PREVIEW_ONLY=1` 隐藏导出（用于不能保存文件的预览环境）；`VITE_PRELOAD_AUDIO=<相对地址>`（可配 `VITE_PRELOAD_AUDIO_NAME`）让页面打开时自动载入该音频。音乐文件有版权，不要提交进仓库。
 

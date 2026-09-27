@@ -21,11 +21,15 @@ const PREVIEW = syntheticAnalysis(246.02, 128)
 /** 按歌曲结构划分的段落，点击可跳转 */
 const CHAPTERS: [string, number][] = [
   ['前奏 · 问答', 0],
-  ['主歌 · 临界线', SONG.verse],
-  ['ζ(½+it) 的轨迹', SONG.theme2],
-  ['副歌 · 相位', SONG.chorus1],
+  ['主歌 · 硬球', SONG.verse],
+  ['时空与分子', SONG.verseB],
+  ['Lanford 级数', SONG.theme2],
+  ['时间分层与累积量', SONG.theme2B],
+  ['副歌 · 切割', SONG.chorus1],
+  ['环面', SONG.chorus1b],
   ['歇息 · 阶段总结', SONG.rest],
-  ['副歌 · 素数之音', SONG.chorus2],
+  ['副歌 · 定理与极限', SONG.chorus2],
+  ['流体', SONG.chorus2b],
   ['尾声', SONG.outro],
 ]
 
@@ -261,9 +265,9 @@ export default function Player() {
     <main className="min-h-screen bg-black px-4 py-8 text-neutral-300">
       <div className="mx-auto max-w-6xl">
         <header className="mb-6">
-          <h1 className="font-['Noto_Serif_SC_Variable',serif] text-2xl font-light tracking-[0.2em] text-white sm:text-3xl">黎曼猜想</h1>
+          <h1 className="font-['Noto_Serif_SC_Variable',serif] text-2xl font-light tracking-[0.2em] text-white sm:text-3xl">希尔伯特第六问题</h1>
           <p className="mt-2 text-sm leading-relaxed text-neutral-500">
-            配乐 ハイスイノナサ「地下鉄の動態」。画面在浏览器里实时渲染，所有零点与曲线都是数值计算结果；段落按原曲结构编排，每个音都对应一个几何体。
+            从硬球的牛顿力学，经玻尔兹曼方程，到流体方程（Deng–Hani–Ma）。配乐 ハイスイノナサ「地下鉄の動態」。画面在浏览器里实时渲染，硬球轨迹、分子与切割序列都由真实模拟算出；段落按原曲结构编排，每个音都对应一个几何体。
           </p>
         </header>
 
@@ -274,7 +278,7 @@ export default function Player() {
           <canvas ref={canvasRef} className="h-full w-full object-contain" onClick={() => void togglePlay()} />
           {!ready && (
             <div className="absolute inset-0 grid place-items-center text-sm text-neutral-500">
-              {loadError ? `加载失败：${loadError}` : '正在加载字体、公式与 ζ 函数数据…'}
+              {loadError ? `加载失败：${loadError}` : '正在加载字体、公式，并运行硬球模拟…'}
             </div>
           )}
           {pseudoFull && (
@@ -425,9 +429,11 @@ export default function Player() {
           <section className="p-5 ring-1 ring-white/10 md:col-span-2">
             <h2 className="text-base font-medium text-white">内容说明与出处</h2>
             <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-neutral-500">
-              <li>ζ 函数用 Borwein 加速级数与函数方程计算，并与 mpmath 逐点对照；零点取自 mpmath 的 30 位精度计算；片中数值一律截断并加省略号。</li>
-              <li>素数之音一段用的是冯·曼戈尔特显式公式，只取前 500 个零点，因此曲线在台阶附近会有细小的振荡，这是截断求和的真实结果。</li>
-              <li>黎曼猜想至今（2026 年 9 月）未被证明。片中所列已知结果：Hardy（1914）、Conrey（1989）、Platt 与 Trudgian（2021）。</li>
+              <li>硬球轨迹来自 T² 上的事件驱动模拟（N = 100，ε = 0.012；N = 400，ε = 0.004）：每次碰撞的时刻精确求出，速度按弹性碰撞律更新，能量守恒到机器精度。主歌里只把时间轴做了分段线性的重新参数化，让“碰撞历史”里的碰撞恰好落在强拍上，碰撞本身不改动。</li>
+              <li>分子是这段碰撞历史的拓扑约化（碰撞 → 原子，自由输运 → 边）；副歌里的切割是对这个分子执行的一个合法的自上而下切割序列，只作示意，不是论文中的完整切割算法。</li>
+              <li>Lanford 一段的碰撞树形状是随机抽样的示意；树的个数 (s+n−1)!/(s−1)! 是精确值。环面一段的圆盘半径放大到 ε = 0.06，射线的首次命中按几何精确计算。</li>
+              <li>流场是不可压 NSF 在 T² 上的精确解：拉普拉斯本征值相同（|k|² = 25）的傅里叶模叠加，非线性项恰为梯度。</li>
+              <li>结果的适用范围：稀薄硬球气体、Boltzmann–Grad 标度、环面 T<sup>d</sup>（d = 2, 3），参数满足论文中的条件 (1.16)/(1.24)。关于其物理意义的不同看法见出处中的评论。</li>
               <li>视觉风格参考大西景太为原曲制作的 MV：黑白几何图形，每个音对应一个几何体。</li>
             </ul>
             <ul className="mt-4 space-y-1 text-sm">

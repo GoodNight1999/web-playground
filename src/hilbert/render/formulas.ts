@@ -3,10 +3,12 @@
 import { FORMULAS, type FormulaId } from '../formulas.gen'
 import { BLACK, WHITE } from './draw'
 
-/** 栅格化用的几档 em 尺寸；绘制时选不小于目标尺寸的那一档，缩小倍数不超过 2 */
-const SIZES = [40, 80, 160]
+/** 栅格化用的几档 em 尺寸；绘制时选不小于目标尺寸的那一档，缩小倍数不超过 2（场景里字号不超过 80） */
+const SIZES = [40, 80]
 const COLORS = { white: WHITE, black: BLACK }
 export type FormulaColor = keyof typeof COLORS
+/** 只有歇息段（白底）用到黑色公式 */
+const BLACK_IDS: FormulaId[] = ['sum_chaos']
 
 type Raster = { canvas: HTMLCanvasElement; em: number }
 
@@ -25,10 +27,9 @@ export class FormulaCache {
   async prepare(): Promise<void> {
     const jobs: Promise<void>[] = []
     for (const id of Object.keys(FORMULAS) as FormulaId[]) {
-      for (const color of Object.keys(COLORS) as FormulaColor[]) {
-        for (const em of SIZES) jobs.push(this.rasterize(id, color, em))
-      }
+      for (const em of SIZES) jobs.push(this.rasterize(id, 'white', em))
     }
+    for (const id of BLACK_IDS) for (const em of SIZES) jobs.push(this.rasterize(id, 'black', em))
     await Promise.all(jobs)
   }
 

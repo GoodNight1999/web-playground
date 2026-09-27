@@ -1,26 +1,34 @@
 // 把时间 t 渲染成一帧：当前场景 → 转场闪白 → 重拍提亮 → 胶片颗粒与暗角 → 首尾黑场。
 
 import { pulseAt, sampleArray, type AudioAnalysis, type Onset } from '../audio/analyze'
-import { SONG, buildTimeline, sceneAt, type SceneId, type Timeline } from '../timeline'
+import { SONG, buildTimeline, sceneAt, type SceneId, type Sizes, type Timeline } from '../timeline'
 import { BG, H, W, easeOut, hash2, smoothstep } from './draw'
 import type { Ctx, Fx, Note, NoteKind } from './ctx'
 import type { FormulaCache } from './formulas'
+import { drawCutting } from './scenes/cutting'
+import { drawFluid } from './scenes/fluid'
+import { drawGas } from './scenes/gas'
 import { drawIntro } from './scenes/intro'
+import { drawKinetic } from './scenes/kinetic'
+import { drawLanford } from './scenes/lanford'
+import { drawLayers } from './scenes/layers'
 import { drawOutro } from './scenes/outro'
-import { drawPhase } from './scenes/phase'
-import { drawPrimes } from './scenes/primes'
 import { drawRest } from './scenes/rest'
-import { drawSpiral } from './scenes/spiral'
-import { drawTunnel } from './scenes/tunnel'
-import { buildVisuals, type Visuals } from './visuals'
+import { drawSpacetime } from './scenes/spacetime'
+import { drawTorus } from './scenes/torus'
+import { GAS_A, buildVisuals, type Visuals } from './visuals'
 
 const DRAW: Record<SceneId, (c: Ctx) => void> = {
   intro: drawIntro,
-  tunnel: drawTunnel,
-  spiral: drawSpiral,
-  phase: drawPhase,
+  gas: drawGas,
+  spacetime: drawSpacetime,
+  lanford: drawLanford,
+  layers: drawLayers,
+  cutting: drawCutting,
+  torus: drawTorus,
   rest: drawRest,
-  primes: drawPrimes,
+  kinetic: drawKinetic,
+  fluid: drawFluid,
   outro: drawOutro,
 }
 
@@ -33,6 +41,16 @@ const FLASH: [number, number][] = [
   [SONG.chorus2, 0.95],
   [SONG.chorus2b, 0.85],
 ]
+
+function sizes(v: Visuals): Sizes {
+  return {
+    atomTimes: v.mol.atoms.map((a) => a.t),
+    simT0: GAS_A.t0,
+    simT: GAS_A.T,
+    cutSteps: v.steps.length,
+    particleLines: v.mol.lines.size,
+  }
+}
 
 let sharedVisuals: Visuals | null = null
 
@@ -51,10 +69,10 @@ export class Renderer {
     this.g = canvas.getContext('2d', { alpha: false })!
     this.f = f
     this.a = a
-    this.tl = buildTimeline(a)
-    // ζ 的网格计算约 1 秒，多个渲染器（预览与导出）共用一份
+    // 硬球模拟与流场约 1 秒，多个渲染器（预览与导出）共用一份
     sharedVisuals ??= buildVisuals()
     this.v = sharedVisuals
+    this.tl = buildTimeline(a, sizes(this.v))
     this.notes = classify(a)
     this.vignette = makeVignette()
   }
@@ -62,7 +80,7 @@ export class Renderer {
   setAnalysis(a: AudioAnalysis) {
     if (a === this.a) return
     this.a = a
-    this.tl = buildTimeline(a)
+    this.tl = buildTimeline(a, sizes(this.v))
     this.notes = classify(a)
   }
 

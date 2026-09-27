@@ -15,7 +15,7 @@ export default defineConfig({
     rolldownOptions: {
       input: {
         main: page('./index.html'),
-        zeta: page('./zeta/index.html'),
+        hilbert: page('./hilbert/index.html'),
       },
     },
   },
