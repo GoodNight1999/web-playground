@@ -18,6 +18,13 @@ function App() {
       >
         点了 {count} 次
       </button>
+      <a
+        href={`${import.meta.env.BASE_URL}ns-blowup/`}
+        className="rounded-lg px-5 py-3 text-center ring-1 ring-slate-300 transition hover:bg-slate-100 dark:ring-slate-700 dark:hover:bg-slate-900"
+      >
+        <span className="block font-medium">纳维–斯托克斯方程的有限时间爆破</span>
+        <span className="block text-sm text-slate-500">发布会动态视频 · 随音乐卡点 · 中英双字幕</span>
+      </a>
       <p className="text-sm text-slate-500">
         修改{' '}
         <code className="rounded bg-slate-200 px-1.5 py-0.5 dark:bg-slate-800">
