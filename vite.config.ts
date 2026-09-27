@@ -15,7 +15,7 @@ export default defineConfig({
     rolldownOptions: {
       input: {
         main: page('./index.html'),
-        'ns-blowup': page('./ns-blowup/index.html'),
+        zeta: page('./zeta/index.html'),
       },
     },
   },

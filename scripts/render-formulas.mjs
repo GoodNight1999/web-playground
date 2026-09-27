@@ -1,52 +1,27 @@
-// 用 MathJax 把视频里用到的 TeX 公式预渲染成 SVG，生成 src/ns-blowup/formulas.gen.ts。
+// 用 MathJax 把视频里用到的 TeX 公式预渲染成 SVG，生成 src/zeta/formulas.gen.ts。
 // 运行时不再依赖 MathJax。改了下面的公式后执行：npm run formulas
 import MathJax from '@mathjax/src'
 import { writeFileSync } from 'node:fs'
 
 const FORMULAS = {
-  // 方程逐项拆开，便于逐项卡点出现
-  eq_dtu: String.raw`\partial_t u`,
-  eq_conv: String.raw`(u\cdot\nabla)u`,
-  eq_visc: String.raw`\nu\Delta u`,
-  eq_grad: String.raw`\nabla p`,
-  eq_f: String.raw`f`,
-  eq_div: String.raw`\nabla\cdot u=0`,
-  eq_plus: String.raw`{}+{}`,
-  eq_minus: String.raw`{}-{}`,
-  eq_eq: String.raw`{}={}`,
-  eq_comma: String.raw`,`,
-
-  ns_compact: String.raw`\partial_t u+(u\cdot\nabla)u-\nu\Delta u+\nabla p=f,\qquad \nabla\cdot u=0`,
-
-  // OpenAI (2026) Theorem 1.1，逐字对应论文陈述
-  thm_l1: String.raw`\forall\,\nu>0\quad \exists\; f\in C_c^{\infty}\big(\mathbb{R}^3\times(0,\infty);\,\mathbb{R}^3\big),\quad K\subset\mathbb{R}^3\ \text{compact},\quad u,\,p\ \text{smooth on}\ \mathbb{R}^3\times[0,1)`,
-  thm_l2: String.raw`\partial_t u+(u\cdot\nabla)u-\nu\Delta u+\nabla p=f,\qquad \nabla\cdot u=0,\qquad u(\cdot,0)=0`,
-  thm_l3: String.raw`\operatorname{supp}u(\cdot,t)\cup\operatorname{supp}p(\cdot,t)\subset K\quad (0\le t<1)`,
-  thm_l4: String.raw`\displaystyle\sup_{0\le t<1}\|u(t)\|_{L^2(\mathbb{R}^3)}<\infty,\qquad \limsup_{t\uparrow 1}\|u(t)\|_{L^\infty(\mathbb{R}^3)}=\infty`,
-
-  // 论文 §2.1 的核心尺度律
-  sc_lr: String.raw`\ell_r\asymp\tau^{1/2}`,
-  sc_lz: String.raw`\ell_z\asymp\tau^{1/2-h}`,
-  sc_u: String.raw`|u_\theta|,\ |u_z|\asymp\tau^{-1/2-h}`,
-  sc_tau: String.raw`\tau=1-t,\qquad 0<h<\tfrac{1}{100}`,
-  lbl_lr: String.raw`\ell_r`,
-  lbl_lz: String.raw`\ell_z`,
-
-  // 示意曲线的坐标标注
-  g_linf: String.raw`\|u(t)\|_{L^\infty}`,
-  g_l2: String.raw`\|u(t)\|_{L^2}`,
-  g_t: String.raw`t`,
-  g_0: String.raw`0`,
-  g_1: String.raw`1`,
-  g_t1: String.raw`t=1`,
-  g_inf: String.raw`\to\infty`,
-  g_sup: String.raw`\sup_{t<1}\|u(t)\|_{L^2}<\infty`,
-
-  // 费弗曼问题陈述的四个命题
-  q_r3: String.raw`\mathbb{R}^3`,
-  q_t3: String.raw`\mathbb{R}^3/\mathbb{Z}^3`,
-  q_f0: String.raw`f\equiv 0`,
-  q_fs: String.raw`f\in C^{\infty}`,
+  zeta_def: String.raw`\zeta(s)=\sum_{n=1}^{\infty}\frac{1}{n^{s}}`,
+  trivial: String.raw`-2,\ \ -4,\ \ -6,\ \ \ldots`,
+  strip: String.raw`0<\operatorname{Re}s<1`,
+  line: String.raw`\operatorname{Re}s=\tfrac{1}{2}`,
+  rho1: String.raw`\tfrac{1}{2}+14.1347\ldots\,i`,
+  rho2: String.raw`\tfrac{1}{2}+21.0220\ldots\,i`,
+  rho3: String.raw`\tfrac{1}{2}+25.0108\ldots\,i`,
+  zeta_line: String.raw`\zeta\!\left(\tfrac{1}{2}+it\right)`,
+  arg: String.raw`\arg\zeta(s)`,
+  psi: String.raw`\psi(x)=x-\sum_{\rho}\frac{x^{\rho}}{\rho}-\log 2\pi-\tfrac{1}{2}\log\!\left(1-x^{-2}\right)`,
+  psi_label: String.raw`\psi(x)`,
+  x_label: String.raw`x`,
+  final: String.raw`\operatorname{Re}(s)=\tfrac{1}{2}\ \ ?`,
+  half: String.raw`\tfrac{1}{2}`,
+  zero: String.raw`0`,
+  one: String.raw`1`,
+  re_axis: String.raw`\operatorname{Re}s`,
+  im_axis: String.raw`\operatorname{Im}s`,
 }
 
 await MathJax.init({
@@ -92,5 +67,5 @@ ${body}
 }
 `
 
-writeFileSync(new URL('../src/ns-blowup/formulas.gen.ts', import.meta.url), out)
+writeFileSync(new URL('../src/zeta/formulas.gen.ts', import.meta.url), out)
 console.log(`wrote ${entries.length} formulas`)

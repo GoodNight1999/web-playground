@@ -1,11 +1,11 @@
 // 把预渲染的 MathJax SVG 栅格化成离屏画布，绘制时按需要的字号缩放。
 
 import { FORMULAS, type FormulaId } from '../formulas.gen'
-import { GOLD, INK } from './draw'
+import { BLACK, WHITE } from './draw'
 
 /** 栅格化用的几档 em 尺寸；绘制时选不小于目标尺寸的那一档，缩小倍数不超过 2 */
 const SIZES = [40, 80, 160]
-const COLORS = { ink: INK, gold: GOLD }
+const COLORS = { white: WHITE, black: BLACK }
 export type FormulaColor = keyof typeof COLORS
 
 type Raster = { canvas: HTMLCanvasElement; em: number }
@@ -65,7 +65,7 @@ export class FormulaCache {
   draw(g: CanvasRenderingContext2D, id: FormulaId, x: number, y: number, o: FormulaOpts) {
     const alpha = o.alpha ?? 1
     if (alpha <= 0.001) return
-    const color = o.color ?? 'ink'
+    const color = o.color ?? 'white'
     const size = SIZES.find((s) => s >= o.em) ?? SIZES[SIZES.length - 1]
     const r = this.rasters.get(`${id}|${color}|${size}`)
     if (!r) return

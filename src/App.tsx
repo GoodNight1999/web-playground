@@ -19,11 +19,11 @@ function App() {
         点了 {count} 次
       </button>
       <a
-        href={`${import.meta.env.BASE_URL}ns-blowup/`}
+        href={`${import.meta.env.BASE_URL}zeta/`}
         className="rounded-lg px-5 py-3 text-center ring-1 ring-slate-300 transition hover:bg-slate-100 dark:ring-slate-700 dark:hover:bg-slate-900"
       >
-        <span className="block font-medium">纳维–斯托克斯方程的有限时间爆破</span>
-        <span className="block text-sm text-slate-500">发布会动态视频 · 随音乐卡点 · 中英双字幕</span>
+        <span className="block font-medium">黎曼猜想</span>
+        <span className="block text-sm text-slate-500">动态演示视频 · 配乐ハイスイノナサ「地下鉄の動態」</span>
       </a>
       <p className="text-sm text-slate-500">
         修改{' '}

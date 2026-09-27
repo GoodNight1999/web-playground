@@ -3,6 +3,8 @@
 import '@fontsource-variable/noto-serif-sc/index.css'
 import '@fontsource-variable/source-serif-4/opsz.css'
 import '@fontsource-variable/source-serif-4/opsz-italic.css'
+import '@fontsource/ibm-plex-mono/300.css'
+import '@fontsource/ibm-plex-mono/400.css'
 import * as content from './content'
 
 function collectText(v: unknown, out: string[]) {
@@ -17,12 +19,16 @@ export async function loadFonts(): Promise<void> {
   collectText(content, parts)
   const sample = Array.from(new Set(Array.from(parts.join('') + '0123456789·–—“”‘’ABCDEFGHIJKLMNOPQRSTUVWXYZ'))).join('')
   const faces = [
+    '300 40px "Noto Serif SC Variable"',
     '400 40px "Noto Serif SC Variable"',
     '600 40px "Noto Serif SC Variable"',
     '700 40px "Noto Serif SC Variable"',
     '400 40px "Source Serif 4 Variable"',
     '600 40px "Source Serif 4 Variable"',
     'italic 400 40px "Source Serif 4 Variable"',
+    'italic 300 40px "Source Serif 4 Variable"',
+    '300 40px "IBM Plex Mono"',
+    '400 40px "IBM Plex Mono"',
   ]
   await Promise.all(faces.map((f) => document.fonts.load(f, sample)))
   await document.fonts.ready

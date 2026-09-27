@@ -13,6 +13,8 @@ export type AudioAnalysis = {
   onsets: Onset[]
   /** 低频起音（大致对应底鼓/贝斯） */
   lowOnsets: Onset[]
+  /** 高频起音（大致对应镲片/打击乐的高频） */
+  highOnsets: Onset[]
   beats: number[]
   bpm: number
   /** 段落边界候选，s 为新颖度 0..1 */
@@ -90,14 +92,16 @@ export async function analyzeAudio(buffer: AudioBuffer, onProgress?: Progress): 
 
   const env = normalize(flux)
   const lowEnv = normalize(lowFlux)
+  const highEnv = normalize(highFlux)
   const onsets = pickOnsets(env, fps)
   const lowOnsets = pickOnsets(lowEnv, fps)
+  const highOnsets = pickOnsets(highEnv, fps)
   const { bpm, beats } = trackBeats(env, fps)
   const energy = energyEnvelope(rms, fps)
   const sections = detectSections(rms, lowFlux, highFlux, flux, fps, onsets)
   onProgress?.(1)
 
-  return { duration: buffer.duration, fps, energy, onsets, lowOnsets, beats, bpm, sections, synthetic: false }
+  return { duration: buffer.duration, fps, energy, onsets, lowOnsets, highOnsets, beats, bpm, sections, synthetic: false }
 }
 
 /** 没有载入音乐时的预览：均匀节拍网格 */
@@ -107,16 +111,18 @@ export function syntheticAnalysis(duration = 240, bpm = 120): AudioAnalysis {
   const beats: number[] = []
   const onsets: Onset[] = []
   const lowOnsets: Onset[] = []
+  const highOnsets: Onset[] = []
   for (let i = 0, t = 0.5; t < duration; i++, t = 0.5 + i * period) {
     beats.push(t)
     const down = i % 4 === 0
     onsets.push({ t, s: down ? 1 : 0.55 })
     if (down) lowOnsets.push({ t, s: 1 })
+    else highOnsets.push({ t, s: 0.6 })
   }
   const sections: Onset[] = []
   for (let t = 0.5 + 32 * period; t < duration; t += 32 * period) sections.push({ t, s: 1 })
   const energy = new Float32Array(Math.ceil(duration * fps)).fill(0.6)
-  return { duration, fps, energy, onsets, lowOnsets, beats, bpm, sections, synthetic: true }
+  return { duration, fps, energy, onsets, lowOnsets, highOnsets, beats, bpm, sections, synthetic: true }
 }
 
 async function toMono22k(buffer: AudioBuffer): Promise<Float32Array> {

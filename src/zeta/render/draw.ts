@@ -3,16 +3,17 @@
 export const W = 1920
 export const H = 1080
 
-export const BG = '#05070a'
-export const ink = (a = 1) => `rgba(236,232,223,${a})`
-export const gold = (a = 1) => `rgba(210,178,115,${a})`
-export const blue = (a = 1) => `rgba(127,176,208,${a})`
-export const INK = '#ece8df'
-export const GOLD = '#d2b273'
+// 参照原版 MV：纯黑白，不用彩色
+export const BG = '#000'
+export const white = (a = 1) => `rgba(255,255,255,${a})`
+export const black = (a = 1) => `rgba(0,0,0,${a})`
+export const WHITE = '#ffffff'
+export const BLACK = '#000000'
 
-// 中文用思源宋体（Noto Serif SC），西文用同一家族的 Source Serif 4，两者笔形协调
+// 中文用思源宋体（Noto Serif SC），西文用同一家族的 Source Serif 4，数字与坐标用 IBM Plex Mono
 export const FONT_ZH = '"Noto Serif SC Variable", "Source Serif 4 Variable", serif'
 export const FONT_EN = '"Source Serif 4 Variable", "Noto Serif SC Variable", serif'
+export const FONT_MONO = '"IBM Plex Mono", "Noto Serif SC Variable", monospace'
 
 export const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x)
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t
@@ -39,10 +40,11 @@ export type TextOpts = {
   baseline?: CanvasTextBaseline
   tracking?: number
   caps?: boolean
+  mono?: boolean
 }
 
 export function setFont(g: CanvasRenderingContext2D, o: TextOpts) {
-  g.font = `${o.italic ? 'italic ' : ''}${o.weight ?? 400} ${o.size}px ${o.zh ? FONT_ZH : FONT_EN}`
+  g.font = `${o.italic ? 'italic ' : ''}${o.weight ?? 400} ${o.size}px ${o.mono ? FONT_MONO : o.zh ? FONT_ZH : FONT_EN}`
   g.textAlign = o.align ?? 'left'
   g.textBaseline = o.baseline ?? 'alphabetic'
   g.letterSpacing = `${o.tracking ?? 0}px`
@@ -72,7 +74,7 @@ function segments(str: string): Seg[] {
     .map((x) => (x.startsWith('$') && x.endsWith('$') && x.length > 2 ? { s: x.slice(1, -1), math: true } : { s: x, math: false }))
 }
 
-const mathOpts = (o: TextOpts): TextOpts => ({ ...o, zh: false, italic: true, weight: 400 })
+const mathOpts = (o: TextOpts): TextOpts => ({ ...o, zh: false, mono: false, italic: true, weight: 400 })
 
 export function richWidth(g: CanvasRenderingContext2D, str: string, o: TextOpts): number {
   let w = 0
@@ -192,4 +194,43 @@ export function hash2(a: number, b: number): number {
   h = Math.imul(h, 0x846ca68b)
   h ^= h >>> 16
   return (h >>> 0) / 4294967296
+}
+
+/** 预渲染的柔光点精灵，叠加模式下画出发光效果 */
+const glowCache = new Map<number, HTMLCanvasElement>()
+export function glowSprite(radius: number): HTMLCanvasElement {
+  const r = Math.max(2, Math.round(radius))
+  let c = glowCache.get(r)
+  if (!c) {
+    c = document.createElement('canvas')
+    c.width = c.height = r * 2
+    const g = c.getContext('2d')!
+    const grad = g.createRadialGradient(r, r, 0, r, r, r)
+    grad.addColorStop(0, 'rgba(255,255,255,1)')
+    grad.addColorStop(0.18, 'rgba(255,255,255,0.55)')
+    grad.addColorStop(0.5, 'rgba(255,255,255,0.12)')
+    grad.addColorStop(1, 'rgba(255,255,255,0)')
+    g.fillStyle = grad
+    g.fillRect(0, 0, r * 2, r * 2)
+    glowCache.set(r, c)
+  }
+  return c
+}
+
+export function glow(g: CanvasRenderingContext2D, x: number, y: number, radius: number, alpha: number) {
+  if (alpha <= 0.005) return
+  const c = glowSprite(radius)
+  const prevOp = g.globalCompositeOperation
+  const prevA = g.globalAlpha
+  g.globalCompositeOperation = 'lighter'
+  g.globalAlpha = prevA * Math.min(1, alpha)
+  g.drawImage(c, x - c.width / 2, y - c.height / 2)
+  g.globalAlpha = prevA
+  g.globalCompositeOperation = prevOp
+}
+
+/** 截断（不四舍五入）到 d 位小数，配合省略号表示“后面还有” */
+export function trunc(x: number, d: number): string {
+  const m = 10 ** d
+  return (Math.floor(x * m) / m).toFixed(d)
 }
