@@ -18,6 +18,12 @@ function App() {
       >
         点了 {count} 次
       </button>
+      <a
+        href={`${import.meta.env.BASE_URL}symmetry.html`}
+        className="text-indigo-600 underline-offset-4 hover:underline dark:text-indigo-400"
+      >
+        电磁学中的对称性分析 →
+      </a>
       <p className="text-sm text-slate-500">
         修改{' '}
         <code className="rounded bg-slate-200 px-1.5 py-0.5 dark:bg-slate-800">

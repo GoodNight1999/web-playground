@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>电磁对称性分析</title>
+<style>
+:root {
+  --bg: #f5f5f3; --card: #ffffff; --fg: #1d2127; --muted: #6b7078; --line: #e1e1dc; --grid: #efefeb;
+  --a: #2f5fd0; --w: #c25418; --sym: #12806a; --anti: #8a3fc7; --mir: #59606b; --slab: #8d8d78;
+  --ok: #1d7f4e; --err: #b3392f;
+  --sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111316; --card: #191c20; --fg: #e5e6e8; --muted: #9298a1; --line: #2b2f35; --grid: #212429;
+    --a: #7ea4ff; --w: #f09157; --sym: #3fc6a1; --anti: #c39cff; --mir: #aeb4bd; --slab: #8a8a76;
+    --ok: #5fcf8f; --err: #ff8a7a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111316; --card: #191c20; --fg: #e5e6e8; --muted: #9298a1; --line: #2b2f35; --grid: #212429;
+  --a: #7ea4ff; --w: #f09157; --sym: #3fc6a1; --anti: #c39cff; --mir: #aeb4bd; --slab: #8a8a76;
+  --ok: #5fcf8f; --err: #ff8a7a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--sans); }
+.wrap { max-width: 980px; margin: 0 auto; padding: 14px 16px 40px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: .02em; }
+.tabs { display: flex; gap: 6px; margin: 12px 0; flex-wrap: wrap; align-items: center; }
+button, .seg label { font: inherit; font-size: 13.5px; color: var(--fg); background: var(--card); border: 1px solid var(--line);
+  border-radius: 7px; padding: 5px 11px; cursor: pointer; line-height: 1.4; }
+button:hover, .seg label:hover { border-color: var(--muted); }
+button[aria-pressed="true"], .tab[aria-current="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.tab .n { font-family: var(--mono); opacity: .6; margin-right: 4px; }
+.navbtn { padding: 5px 9px; }
+.spacer { flex: 1; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+svg.fig { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+.cap { margin: 12px 2px 0; min-height: 4.8em; }
+.cap div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cap .l1 { font-size: 16px; font-weight: 600; }
+.cap .l2 { color: var(--fg); }
+.cap .l3 { color: var(--muted); font-size: 13.5px; }
+.mono { font-family: var(--mono); font-size: 13px; }
+.ctl { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 10px; }
+.grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.hint { color: var(--muted); font-size: 12.5px; }
+.ok { color: var(--ok); } .err { color: var(--err); } .sym { color: var(--sym); } .anti { color: var(--anti); } .na { color: var(--muted); }
+.ea { color: var(--a); } .ew { color: var(--w); }
+input[type=range] { accent-color: var(--fg); width: 120px; vertical-align: middle; }
+label.chk { font-size: 13.5px; color: var(--muted); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+section[hidden] { display: none; }
+@media (max-width: 640px) {
+  .cap div { white-space: normal; }
+  .cap { min-height: 0; }
+  h1 { font-size: 15px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>电磁学中的对称性分析</h1>
+    <button id="theme" title="切换配色">◐ 自动</button>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="navbtn" id="prev" aria-label="上一步">←</button>
+    <button class="tab" data-i="0"><span class="n">1</span>镜像规则</button>
+    <button class="tab" data-i="1"><span class="n">2</span>对称面</button>
+    <button class="tab" data-i="2"><span class="n">3</span>E 与 B</button>
+    <button class="tab" data-i="3"><span class="n">4</span>典型系统</button>
+    <button class="tab" data-i="4"><span class="n">5</span>能与不能</button>
+    <button class="navbtn" id="next" aria-label="下一步">→</button>
+  </nav>
+
+  <!-- 1 -->
+  <section class="panel">
+    <div class="card"><svg class="fig" id="svg1" viewBox="0 0 900 500"></svg></div>
+    <div class="cap"><div class="l1" id="c1a"></div><div class="l2 mono" id="c1b"></div><div class="l3" id="c1c"></div></div>
+    <div class="ctl">
+      <div class="grp" id="p1kind">
+        <button data-k="polar" aria-pressed="true">极矢量（E、v、I dl）</button>
+        <button data-k="axial" aria-pressed="false">轴矢量（B、ω）</button>
+      </div>
+      <span class="hint">拖动：镜面中点平移 · 端点旋转 · 矢量首尾</span>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="panel" hidden>
+    <div class="card"><svg class="fig" id="svg2" viewBox="0 0 900 500"></svg></div>
+    <div class="cap"><div class="l1" id="c2a"></div><div class="l2" id="c2b"></div><div class="l3" id="c2c"></div></div>
+    <div class="ctl">
+      <div class="grp" id="p2pre"></div>
+      <div class="grp" id="p2mir"></div>
+      <button id="p2flip">⇋ 翻转</button>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="panel" hidden>
+    <div class="card"><svg class="fig" id="svg3" viewBox="0 0 900 500"></svg></div>
+    <div class="cap"><div class="l1" id="c3a"></div><div class="l2" id="c3b"></div><div class="l3" id="c3c"></div></div>
+    <div class="ctl">
+      <div class="grp" id="p3scene">
+        <button data-s="symE">对称电荷</button>
+        <button data-s="symB">对称电流</button>
+        <button data-s="antiB">反对称电流</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="p3link" checked>镜像联动</label>
+      <span class="hint">拖动电荷 / 导线</span>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="panel" hidden>
+    <div class="card"><svg class="fig" id="svg4" viewBox="0 0 900 520"></svg></div>
+    <div class="cap"><div class="l1" id="c4a"></div><div class="l2" id="c4b"></div><div class="l3 mono" id="c4c"></div></div>
+    <div class="ctl">
+      <div class="grp" id="p4sys"></div>
+      <span class="hint">拖动画面旋转 · 双击复位</span>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="panel" hidden>
+    <div class="card"><svg class="fig" id="svg5" viewBox="0 0 900 500"></svg></div>
+    <div class="cap"><div class="l1" id="c5a"></div><div class="l2" id="c5b"></div><div class="l3" id="c5c"></div></div>
+    <div class="ctl">
+      <div class="grp" id="p5show">
+        <button data-f="B" aria-pressed="true">显示 B</button>
+        <button data-f="H" aria-pressed="false">显示 H</button>
+      </div>
+      <button id="p5flip">反转 M</button>
+      <label class="chk">棒长 <input type="range" id="p5L" min="1.5" max="6" step="0.1" value="4"><span class="mono" id="p5Lv"></span></label>
+      <label class="chk">离端面 ε <input type="range" id="p5e" min="0.005" max="0.4" step="0.005" value="0.01"><span class="mono" id="p5ev"></span></label>
+    </div>
+  </section>
+</div>
+
+<script>
+'use strict';
+/* ================= 矢量运算 ================= */
+const PI = Math.PI, D2R = PI / 180;
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const len = a => Math.hypot(a[0], a[1], a[2]);
+const unit = a => mul(a, 1 / (len(a) || 1));
+const reflV = (v, n) => sub(v, mul(n, 2 * dot(v, n)));            // 极矢量镜像
+const reflP = (p, p0, n) => sub(p, mul(n, 2 * dot(sub(p, p0), n))); // 点的镜像
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const fmt = (x, d = 2) => (x < 0 ? '−' : '+') + Math.abs(x).toFixed(d);
+
+/* ================= 场源：离散求和 ================= */
+// 电流元表：每 7 个数 = 中点(3) + dl(3) + I
+function addLine(S, p, d, L, N, I) {
+  const h = 2 * L / N;
+  for (let k = 0; k < N; k++) {
+    const s = -L + (k + 0.5) * h;
+    S.push(p[0] + d[0] * s, p[1] + d[1] * s, p[2] + d[2] * s, d[0] * h, d[1] * h, d[2] * h, I);
+  }
+}
+// 圆环：电流从 u 转向 v，法向 u×v
+function addLoop(S, c, u, v, R, N, I) {
+  for (let k = 0; k < N; k++) {
+    const t0 = 2 * PI * k / N, t1 = 2 * PI * (k + 1) / N;
+    const p0 = add(c, add(mul(u, R * Math.cos(t0)), mul(v, R * Math.sin(t0))));
+    const p1 = add(c, add(mul(u, R * Math.cos(t1)), mul(v, R * Math.sin(t1))));
+    const m = mul(add(p0, p1), 0.5), dl = sub(p1, p0);
+    S.push(m[0], m[1], m[2], dl[0], dl[1], dl[2], I);
+  }
+}
+// 毕–萨定律：B = (1/4π) Σ I dl × r / r³   （μ0 = 1）
+function bAt(S, P) {
+  let bx = 0, by = 0, bz = 0;
+  for (let i = 0; i < S.length; i += 7) {
+    const rx = P[0] - S[i], ry = P[1] - S[i + 1], rz = P[2] - S[i + 2];
+    const r2 = rx * rx + ry * ry + rz * rz;
+    const k = S[i + 6] / (r2 * Math.sqrt(r2));
+    const dx = S[i + 3], dy = S[i + 4], dz = S[i + 5];
+    bx += (dy * rz - dz * ry) * k; by += (dz * rx - dx * rz) * k; bz += (dx * ry - dy * rx) * k;
+  }
+  const f = 1 / (4 * PI);
+  return [bx * f, by * f, bz * f];
+}
+// 库仑定律：E = (1/4π) Σ q r / r³
+function eAt(Q, P) {
+  let e = [0, 0, 0];
+  for (const c of Q) {
+    const r = sub(P, c.p), r2 = dot(r, r);
+    e = add(e, mul(r, c.q / (r2 * Math.sqrt(r2))));
+  }
+  return mul(e, 1 / (4 * PI));
+}
+
+/* ================= SVG 工具 ================= */
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+function E(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const clear = g => { while (g.firstChild) g.removeChild(g.firstChild); };
+const ln = (g, x1, y1, x2, y2, st) => E('line', { x1, y1, x2, y2, style: st }, g);
+const poly = (g, pts, st, closed) => E(closed ? 'polygon' : 'polyline',
+  { points: pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '), style: st }, g);
+const circ = (g, x, y, r, st) => E('circle', { cx: x, cy: y, r, style: st }, g);
+function txt(g, x, y, s, st, anchor) {
+  const t = E('text', { x, y, style: st || '', 'text-anchor': anchor || 'start' }, g);
+  t.textContent = s; return t;
+}
+const F = (size, color, extra) => `font:${size}px var(--sans);fill:${color};${extra || ''}`;
+// 箭头（屏幕坐标）。dash = 虚线 + 空心箭头
+function arrow(g, x1, y1, x2, y2, o) {
+  o = o || {};
+  const c = o.c || 'var(--fg)', w = o.w || 2, dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy);
+  if (l < 1) return;
+  const hs = Math.min(o.h || 11, l * 0.6), ux = dx / l, uy = dy / l, hw = hs * 0.42;
+  const op = o.op != null ? `opacity:${o.op};` : '';
+  const hx = x2 - ux * hs, hy = y2 - uy * hs;
+  ln(g, x1, y1, x2 - ux * hs * 0.8, y2 - uy * hs * 0.8,
+    `stroke:${c};stroke-width:${w};stroke-linecap:round;${o.dash ? 'stroke-dasharray:' + o.dash + ';' : ''}${op}`);
+  E('path', {
+    d: `M${x2.toFixed(1)},${y2.toFixed(1)}L${(hx - uy * hw).toFixed(1)},${(hy + ux * hw).toFixed(1)}L${(hx + uy * hw).toFixed(1)},${(hy - ux * hw).toFixed(1)}Z`,
+    style: o.dash ? `fill:none;stroke:${c};stroke-width:1.6;stroke-linejoin:round;${op}` : `fill:${c};${op}`
+  }, g);
+}
+function view(cx, cy, s) {
+  return { s, X: x => cx + x * s, Y: y => cy - y * s, inv: p => [(p[0] - cx) / s, (cy - p[1]) / s, 0] };
+}
+function svgPt(svg, e) {
+  const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  const r = pt.matrixTransform(svg.getScreenCTM().inverse());
+  return [r.x, r.y];
+}
+// 通用拖拽：hit(p) 返回被抓住的对象
+function dragger(svg, hit, move, rerender) {
+  let act = null, raf = 0, last = null;
+  svg.addEventListener('pointerdown', e => {
+    const p = svgPt(svg, e), h = hit(p);
+    if (h) { act = h; svg.setPointerCapture(e.pointerId); svg.style.cursor = 'grabbing'; e.preventDefault(); }
+  });
+  svg.addEventListener('pointermove', e => {
+    const p = svgPt(svg, e);
+    if (!act) { svg.style.cursor = hit(p) ? 'grab' : 'default'; return; }
+    last = p;
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; move(act, last); rerender(); });
+  });
+  const end = () => { act = null; svg.style.cursor = 'default'; };
+  svg.addEventListener('pointerup', end);
+  svg.addEventListener('pointercancel', end);
+}
+function grid(g, V, x0, x1, y0, y1) {
+  for (let x = Math.ceil(x0); x <= x1; x++) ln(g, V.X(x), V.Y(y0), V.X(x), V.Y(y1), 'stroke:var(--grid);stroke-width:1');
+  for (let y = Math.ceil(y0); y <= y1; y++) ln(g, V.X(x0), V.Y(y), V.X(x1), V.Y(y), 'stroke:var(--grid);stroke-width:1');
+}
+// 镜面：直线 + 一侧短斜线
+function mirrorLine(g, V, C, u, n, color, half) {
+  half = half || 9;
+  const a = add(C, mul(u, -half)), b = add(C, mul(u, half));
+  ln(g, V.X(a[0]), V.Y(a[1]), V.X(b[0]), V.Y(b[1]), `stroke:${color};stroke-width:2.5`);
+  for (let s = -half; s <= half; s += 0.28) {
+    const p = add(C, mul(u, s)), q = add(p, add(mul(n, -0.13), mul(u, -0.1)));
+    ln(g, V.X(p[0]), V.Y(p[1]), V.X(q[0]), V.Y(q[1]), `stroke:${color};stroke-width:1;opacity:.45`);
+  }
+}
+function handle(g, x, y, kind) {
+  circ(g, x, y, kind === 'rot' ? 6 : 7, `fill:var(--card);stroke:var(--mir);stroke-width:2`);
+  if (kind === 'move') circ(g, x, y, 2.2, 'fill:var(--mir)');
+}
+const near = (p, q, r) => Math.hypot(p[0] - q[0], p[1] - q[1]) < (r || 15);
+function setPressed(box, attr, val) {
+  box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset[attr] === val)));
+}
+
+/* ================= 面板 1：矢量的镜像规则 ================= */
+const P1 = (() => {
+  const svg = $('#svg1'), V = view(450, 250, 100), g = E('g', {}, svg);
+  const st = { C: [0.4, 0, 0], th: 78 * D2R, T: [-2.9, -0.9, 0], H: [-1.25, 0.75, 0], axial: false };
+  const geom = () => ({ u: [Math.cos(st.th), Math.sin(st.th), 0], n: [-Math.sin(st.th), Math.cos(st.th), 0] });
+  const scr = p => [V.X(p[0]), V.Y(p[1])];
+  function handles() {
+    const { u } = geom();
+    return { H: st.H, T: st.T, R1: add(st.C, mul(u, 2.1)), R2: add(st.C, mul(u, -2.1)), C: st.C };
+  }
+  function hit(p) {
+    const h = handles();
+    for (const k of ['H', 'T', 'R1', 'R2', 'C']) if (near(p, scr(h[k]))) return k;
+    return null;
+  }
+  function move(k, p) {
+    const w = V.inv(p);
+    w[0] = clamp(w[0], -4.3, 4.3); w[1] = clamp(w[1], -2.3, 2.3);
+    if (k === 'H') st.H = w;
+    else if (k === 'T') st.T = w;
+    else if (k === 'C') st.C = w;
+    else {
+      const d = sub(w, st.C);
+      st.th = Math.atan2(d[1], d[0]) + (k === 'R2' ? PI : 0);
+    }
+  }
+  function comps(g2, tail, v, col, tag) {
+    const { u, n } = geom();
+    const pa = add(tail, mul(u, dot(v, u))), pn = add(tail, mul(n, dot(v, n)));
+    const t = scr(tail);
+    arrow(g2, t[0], t[1], V.X(pa[0]), V.Y(pa[1]), { c: col, w: 1.6, op: .55, h: 8 });
+    arrow(g2, t[0], t[1], V.X(pn[0]), V.Y(pn[1]), { c: col, w: 1.6, op: .55, h: 8, dash: '4 3' });
+    // 平行四边形补全线
+    const tip = add(tail, v);
+    ln(g2, V.X(pa[0]), V.Y(pa[1]), V.X(tip[0]), V.Y(tip[1]), `stroke:${col};stroke-width:1;opacity:.25`);
+    ln(g2, V.X(pn[0]), V.Y(pn[1]), V.X(tip[0]), V.Y(tip[1]), `stroke:${col};stroke-width:1;opacity:.25`);
+    const ma = mul(add(tail, pa), 0.5), mn = mul(add(tail, pn), 0.5);
+    const off = (q, dir) => [V.X(q[0] + dir[0] * 0.22), V.Y(q[1] + dir[1] * 0.22) + 5];
+    const oa = off(ma, mul(n, dot(v, n) >= 0 ? -1 : 1)), on = off(mn, mul(u, dot(v, u) >= 0 ? -1 : 1));
+    txt(g2, oa[0], oa[1], tag + '∥', F(14, col, 'font-style:italic'), 'middle');
+    txt(g2, on[0], on[1], tag + '⊥', F(14, col, 'font-style:italic'), 'middle');
+  }
+  function render() {
+    clear(g);
+    grid(g, V, -4.5, 4.5, -2.5, 2.5);
+    const { u, n } = geom();
+    mirrorLine(g, V, st.C, u, n, 'var(--mir)');
+    const lp = add(st.C, mul(u, 2.45));
+    txt(g, V.X(lp[0]) + 10, V.Y(lp[1]), '镜面', F(13, 'var(--mir)'));
+    const a = sub(st.H, st.T);
+    const Tp = reflP(st.T, st.C, n);
+    const ap = st.axial ? mul(reflV(a, n), -1) : reflV(a, n);
+    const Hp = add(Tp, ap);
+    const dl = 'stroke:var(--muted);stroke-width:1;stroke-dasharray:2 4';
+    ln(g, V.X(st.T[0]), V.Y(st.T[1]), V.X(Tp[0]), V.Y(Tp[1]), dl);
+    if (!st.axial) ln(g, V.X(st.H[0]), V.Y(st.H[1]), V.X(Hp[0]), V.Y(Hp[1]), dl);
+    comps(g, st.T, a, 'var(--a)', 'a');
+    comps(g, Tp, ap, 'var(--w)', 'a′');
+    arrow(g, V.X(st.T[0]), V.Y(st.T[1]), V.X(st.H[0]), V.Y(st.H[1]), { c: 'var(--a)', w: 3.2, h: 14 });
+    arrow(g, V.X(Tp[0]), V.Y(Tp[1]), V.X(Hp[0]), V.Y(Hp[1]), { c: 'var(--w)', w: 3.2, h: 14 });
+    const lbl = (p, s, c) => txt(g, V.X(p[0]) + 9, V.Y(p[1]) - 9, s, F(17, c, 'font-weight:600;font-style:italic'));
+    lbl(st.H, 'a', 'var(--a)'); lbl(Hp, 'a′', 'var(--w)');
+    const h = handles();
+    handle(g, ...scr(h.C), 'move'); handle(g, ...scr(h.R1), 'rot'); handle(g, ...scr(h.R2), 'rot');
+    circ(g, ...scr(st.T), 5, 'fill:var(--a)'); circ(g, ...scr(st.H), 9, 'fill:var(--a);opacity:.15');
+    // 文字
+    const pa = dot(a, u), pn = dot(a, n), qa = dot(ap, u), qn = dot(ap, n);
+    if (!st.axial) {
+      $('#c1a').innerHTML = '镜像：平行分量<span class="ok">不变</span>，垂直分量<span class="err">反向</span>';
+      $('#c1c').textContent = '电流元 I dl、电场 E、速度 v 都按这条规则翻转';
+    } else {
+      $('#c1a').innerHTML = '轴矢量：平行分量<span class="err">反向</span>，垂直分量<span class="ok">不变</span>';
+      $('#c1c').textContent = '轴矢量 = 极矢量的镜像再取负（如 B ∝ I dl × r，见面板 3）';
+    }
+    $('#c1b').innerHTML = `a∥ ${fmt(pa)} → ${fmt(qa)}　　a⊥ ${fmt(pn)} → ${fmt(qn)}`;
+  }
+  dragger(svg, hit, move, render);
+  $('#p1kind').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    st.axial = b.dataset.k === 'axial'; setPressed($('#p1kind'), 'k', b.dataset.k); render();
+  });
+  return { render };
+})();
+
+/* ================= 面板 2：对称面 / 反对称面 ================= */
+const P2 = (() => {
+  const svg = $('#svg2'), V = view(450, 255, 90), g = E('g', {}, svg);
+  const K = [-0.34, -0.2];                    // 斜投影：z（朝向观察者）画向左下
+  const pr = p => [V.X(p[0] + K[0] * p[2]), V.Y(p[1] + K[1] * p[2])];
+  const PRE = {
+    wires: {
+      name: '两根同向直导线',
+      curves: [{ type: 'line', p: [0, 1, 0], d: [1, 0, 0] }, { type: 'line', p: [0, -1, 0], d: [1, 0, 0] }],
+      mirrors: [{ name: '中间平面', c: [0, 0], th: 0 }, { name: '垂直于导线', c: [0.5, 0], th: 90 }, { name: '斜 30°', c: [0, 0], th: 30 }],
+      note: '两根无限长导线（侧视）'
+    },
+    ringEnd: {
+      name: '环形电流 · 端视',
+      curves: [{ type: 'circle', c: [0, 0, 0], n: [0, 0, 1], e1: [1, 0, 0], R: 1.75 }],
+      mirrors: [{ name: '过轴平面', c: [0, 0], th: 90 }, { name: '过轴（斜）', c: [0, 0], th: 30 }, { name: '偏离轴线', c: [0.6, 0], th: 90 }],
+      note: '沿轴看（轴垂直于纸面）'
+    },
+    ringSide: {
+      name: '环形电流 · 侧视', oblique: true,
+      curves: [{ type: 'circle', c: [0, 0, 0], n: [1, 0, 0], e1: [0, 1, 0], R: 1.75 }],
+      mirrors: [{ name: '环面', c: [0, 0], th: 90 }, { name: '过轴平面', c: [0, 0], th: 0 }, { name: '偏离环面', c: [0.6, 0], th: 90 }],
+      note: '侧视（略斜，环面垂直于纸面）'
+    }
+  };
+  const st = { pre: 'wires', c: [0, 0, 0], th: 0, flipped: false, t: 0 };
+  const geom = () => ({
+    u: [Math.cos(st.th), Math.sin(st.th), 0], n: [-Math.sin(st.th), Math.cos(st.th), 0], p0: st.c
+  });
+  function circPt(c, phi) {
+    const e2 = cross(c.n, c.e1);
+    return {
+      p: add(c.c, add(mul(c.e1, c.R * Math.cos(phi)), mul(e2, c.R * Math.sin(phi)))),
+      d: add(mul(c.e1, -Math.sin(phi)), mul(e2, Math.cos(phi)))
+    };
+  }
+  function arrowsOf(c) {
+    const out = [];
+    if (c.type === 'line') for (let k = 0; k <= 6; k++) { const s = -4 + k * 8 / 6; out.push({ p: add(c.p, mul(c.d, s)), d: c.d }); }
+    else for (let k = 0; k < 12; k++) out.push(circPt(c, (k + 0.5) * PI / 6));
+    return out;
+  }
+  function testSamples(c) {
+    const out = [];
+    if (c.type === 'line') for (let s = -6; s <= 6; s += 0.25) out.push({ p: add(c.p, mul(c.d, s)), d: c.d });
+    else for (let k = 0; k < 96; k++) out.push(circPt(c, (k + 0.5) * PI / 48));
+    return out;
+  }
+  function closest(c, q) {
+    if (c.type === 'line') { const t = dot(sub(q, c.p), c.d); return { p: add(c.p, mul(c.d, t)), d: c.d }; }
+    const v = sub(q, c.c), vin = sub(v, mul(c.n, dot(v, c.n))), r = unit(vin);
+    return { p: add(c.c, mul(r, c.R)), d: cross(c.n, r) };
+  }
+  // 判定：把整组电流按极矢量规则翻转，再和原分布逐点比对
+  function classify() {
+    const { n, p0 } = geom(), curves = PRE[st.pre].curves;
+    let same = true, opp = true;
+    for (const c of curves) for (const s of testSamples(c)) {
+      const q = reflP(s.p, p0, n), dq = reflV(s.d, n);
+      let best = null, bd = 1e9;
+      for (const c2 of curves) { const m = closest(c2, q), d = len(sub(m.p, q)); if (d < bd) { bd = d; best = m; } }
+      if (bd > 0.02) return 'none';
+      const cs = dot(dq, best.d);
+      if (cs < 0.999) same = false;
+      if (cs > -0.999) opp = false;
+    }
+    return same ? 'sym' : opp ? 'anti' : 'mixed';
+  }
+  const scr = p => [V.X(p[0]), V.Y(p[1])];
+  function handles() {
+    const { u } = geom();
+    return { R1: add(st.c, mul(u, 2.4)), R2: add(st.c, mul(u, -2.4)), C: st.c };
+  }
+  function hit(p) {
+    const h = handles();
+    for (const k of ['R1', 'R2', 'C']) if (near(p, scr(h[k]))) return k;
+    return null;
+  }
+  const snap = (x, s, tol) => Math.abs(x - Math.round(x / s) * s) < tol ? Math.round(x / s) * s : x;
+  function move(k, p) {
+    const w = V.inv(p);
+    if (k === 'C') st.c = [snap(clamp(w[0], -4.5, 4.5), 0.25, 0.08), snap(clamp(w[1], -2.5, 2.5), 0.25, 0.08), 0];
+    else {
+      const d = sub(w, st.c);
+      let th = Math.atan2(d[1], d[0]) + (k === 'R2' ? PI : 0);
+      th = snap(th / D2R, 15, 3.5) * D2R;
+      st.th = th;
+    }
+    updMirBtns();
+  }
+  function drawSet(g2, curves, tt, style) {
+    const { n, p0 } = geom();
+    const tf = p => sub(p, mul(n, 2 * tt * dot(sub(p, p0), n)));
+    const tv = v => sub(v, mul(n, 2 * tt * dot(v, n)));
+    for (const c of curves) {
+      let pts;
+      if (c.type === 'line') pts = [add(c.p, mul(c.d, -8)), add(c.p, mul(c.d, 8))];
+      else { pts = []; for (let k = 0; k <= 96; k++) pts.push(circPt(c, k * PI / 48).p); }
+      poly(g2, pts.map(p => pr(tf(p))), style.curve);
+      for (const a of arrowsOf(c)) {
+        const p = tf(a.p), d = tv(a.d), A = pr(add(p, mul(d, -0.3))), B = pr(add(p, mul(d, 0.3)));
+        arrow(g2, A[0], A[1], B[0], B[1], style.arrow);
+      }
+    }
+  }
+  const LABEL = {
+    sym: ['对称面', 'var(--sym)', '翻转后与原图完全重合'],
+    anti: ['反对称面', 'var(--anti)', '位置重合，箭头全部反向'],
+    mixed: ['无镜面对称', 'var(--muted)', '位置重合，但箭头有的同向有的反向'],
+    none: ['无镜面对称', 'var(--muted)', '翻转后位置对不上']
+  };
+  function render() {
+    clear(g);
+    grid(g, V, -5, 5, -2.8, 2.8);
+    const pre = PRE[st.pre], { u, n } = geom();
+    const cls = classify(), show = st.flipped && st.t >= 1;
+    const mcol = show ? LABEL[cls][1] : 'var(--mir)';
+    if (pre.oblique) {
+      const z = [0, 0, 1], cs = [[-6, -2.3], [6, -2.3], [6, 2.3], [-6, 2.3]]
+        .map(([a, b]) => pr(add(st.c, add(mul(u, a), mul(z, b)))));
+      poly(g, cs, `fill:${mcol};opacity:.07;stroke:none`, true);
+    }
+    mirrorLine(g, V, st.c, u, n, mcol);
+    // 轴线
+    if (st.pre === 'ringSide') {
+      const a = pr([-3.6, 0, 0]), b = pr([3.6, 0, 0]);
+      ln(g, a[0], a[1], b[0], b[1], 'stroke:var(--muted);stroke-width:1;stroke-dasharray:6 4');
+      txt(g, b[0] + 6, b[1] + 4, '轴', F(12, 'var(--muted)'));
+    } else if (st.pre === 'ringEnd') {
+      circ(g, V.X(0), V.Y(0), 6, 'fill:none;stroke:var(--muted);stroke-width:1.2'); circ(g, V.X(0), V.Y(0), 1.8, 'fill:var(--muted)');
+      txt(g, V.X(0) + 10, V.Y(0) + 4, '轴', F(12, 'var(--muted)'));
+    }
+    drawSet(g, pre.curves, 0, { curve: 'fill:none;stroke:var(--muted);stroke-width:1.2', arrow: { c: 'var(--a)', w: 2.6, h: 12 } });
+    if (st.flipped) drawSet(g, pre.curves, st.t, {
+      curve: 'fill:none;stroke:var(--w);stroke-width:1.2;stroke-dasharray:5 4',
+      arrow: { c: 'var(--w)', w: 2.2, h: 14, dash: '5 3' }
+    });
+    const h = handles();
+    handle(g, ...scr(h.C), 'move'); handle(g, ...scr(h.R1), 'rot'); handle(g, ...scr(h.R2), 'rot');
+    txt(g, 18, 488, pre.note, F(12, 'var(--muted)'));
+    // 图例
+    arrow(g, 700, 482, 728, 482, { c: 'var(--a)', w: 2.4, h: 9 }); txt(g, 734, 487, '原图', F(12, 'var(--muted)'));
+    arrow(g, 784, 482, 812, 482, { c: 'var(--w)', w: 2, h: 10, dash: '5 3' }); txt(g, 818, 487, '翻转后', F(12, 'var(--muted)'));
+    // 结论徽标
+    if (show) {
+      const [t, c] = LABEL[cls];
+      E('rect', { x: 16, y: 14, width: t.length * 19 + 26, height: 38, rx: 8, style: `fill:${c};opacity:.12` }, g);
+      txt(g, 29, 40, t, F(19, c, 'font-weight:700'));
+    }
+    if (show) {
+      const [t, c, why] = LABEL[cls];
+      $('#c2a').innerHTML = `${why} → <span style="color:${c}">${t}</span>`;
+    } else {
+      $('#c2a').innerHTML = '按「翻转」：整组电流关于镜面做镜像，虚线叠加在原图上';
+    }
+    $('#c2b').textContent = '重合 → 对称面；位置重合、箭头全反 → 反对称面；其余 → 无镜面对称';
+    $('#c2c').textContent = '电流元是极矢量（面板 1 规则）· 镜面可拖动、旋转';
+    $('#p2flip').textContent = st.flipped ? '↺ 收回' : '⇋ 翻转';
+  }
+  function animate() {
+    const t0 = performance.now();
+    const step = now => {
+      const x = clamp((now - t0) / 750, 0, 1);
+      st.t = x < 1 ? 0.5 - 0.5 * Math.cos(PI * x) : 1;
+      render();
+      if (x < 1 && st.flipped) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  function setMirror(m) { st.c = [m.c[0], m.c[1], 0]; st.th = m.th * D2R; }
+  function updMirBtns() {
+    const ms = PRE[st.pre].mirrors;
+    $('#p2mir').querySelectorAll('button').forEach((b, i) => {
+      const m = ms[i];
+      const on = Math.abs(st.c[0] - m.c[0]) < 1e-9 && Math.abs(st.c[1] - m.c[1]) < 1e-9 &&
+        Math.abs(((st.th / D2R - m.th) % 180 + 180) % 180) < 1e-6;
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+  function buildButtons() {
+    const box = $('#p2pre'); clear(box);
+    for (const k in PRE) {
+      const b = document.createElement('button'); b.textContent = PRE[k].name; b.dataset.p = k;
+      b.setAttribute('aria-pressed', String(k === st.pre));
+      b.onclick = () => { st.pre = k; setMirror(PRE[k].mirrors[0]); st.flipped = false; buildButtons(); render(); };
+      box.appendChild(b);
+    }
+    const mb = $('#p2mir'); clear(mb);
+    PRE[st.pre].mirrors.forEach(m => {
+      const b = document.createElement('button'); b.textContent = '镜面：' + m.name;
+      b.onclick = () => { setMirror(m); updMirBtns(); render(); };
+      mb.appendChild(b);
+    });
+    updMirBtns();
+  }
+  $('#p2flip').onclick = () => { st.flipped = !st.flipped; st.t = 0; if (st.flipped) animate(); else render(); };
+  dragger(svg, hit, move, render);
+  setMirror(PRE.wires.mirrors[0]);
+  buildButtons();
+  return { render, classify, _st: st, _PRE: PRE, _setMirror: setMirror };
+})();
+
+/* ================= 面板 3：E 与 B 的区别 ================= */
+const P3 = (() => {
+  const svg = $('#svg3'), V = view(450, 250, 100), g = E('g', {}, svg);
+  const SC = {
+    symE: { kind: 'E', rel: 1, src: [[-1.5, 0.9, 1], [1.5, 0.9, 1], [-0.8, -1.0, -0.7], [0.8, -1.0, -0.7]] },
+    symB: { kind: 'B', rel: 1, src: [[-1.5, 0.9, 1], [1.5, 0.9, 1], [-0.8, -1.0, -1], [0.8, -1.0, -1]] },
+    antiB: { kind: 'B', rel: -1, src: [[-1.5, 0.9, 1], [1.5, 0.9, -1], [-0.8, -1.0, -1], [0.8, -1.0, 1]] }
+  };
+  const st = { s: 'symE', link: true, src: null };
+  const load = s => { st.s = s; st.src = SC[s].src.map(a => a.slice()); };
+  load('symE');
+  let segs = null;
+  function rebuild() {
+    if (SC[st.s].kind !== 'B') { segs = null; return; }
+    const S = [];
+    for (const [x, y, I] of st.src) addLine(S, [x, y, 0], [0, 0, 1], 40, 1600, I);  // 垂直纸面的长直导线
+    segs = Float64Array.from(S);
+  }
+  const field = P => SC[st.s].kind === 'E'
+    ? eAt(st.src.map(([x, y, q]) => ({ p: [x, y, 0], q })), P)
+    : bAt(segs, P);
+  const scr = s => [V.X(s[0]), V.Y(s[1])];
+  function hit(p) { for (let i = 0; i < st.src.length; i++) if (near(p, scr(st.src[i]), 16)) return { i }; return null; }
+  function move(h, p) {
+    const w = V.inv(p), s = st.src[h.i];
+    let x = clamp(w[0], -4.3, 4.3); const y = clamp(w[1], -2.3, 2.3);
+    if (st.link) {
+      if (Math.abs(x) < 0.3) x = (s[0] < 0 ? -0.3 : 0.3);     // 防止两个镜像源重叠
+      const j = h.i ^ 1, o = st.src[j];
+      o[0] = -x; o[1] = y;
+    }
+    s[0] = x; s[1] = y;
+    rebuild();
+  }
+  function render() {
+    clear(g);
+    grid(g, V, -4.5, 4.5, -2.5, 2.5);
+    const sc = SC[st.s], isE = sc.kind === 'E';
+    const mcol = sc.rel > 0 ? 'var(--sym)' : 'var(--anti)';
+    // 背景方向场（数值计算，固定长度，仅示方向）
+    for (let x = -4.25; x <= 4.3; x += 0.5) for (let y = -2.25; y <= 2.3; y += 0.5) {
+      if (st.src.some(s => Math.hypot(s[0] - x, s[1] - y) < 0.38)) continue;
+      const f = field([x, y, 0]), u = unit(f), h = 0.15;
+      arrow(g, V.X(x - u[0] * h), V.Y(y - u[1] * h), V.X(x + u[0] * h), V.Y(y + u[1] * h), { c: 'var(--muted)', w: 1.1, h: 6, op: .3 });
+    }
+    mirrorLine(E('g', { style: 'opacity:.5' }, g), V, [0, 0, 0], [0, 1, 0], [-1, 0, 0], mcol, 2.6);
+    txt(g, V.X(0) + 8, V.Y(2.38), '镜面', F(13, mcol));
+    // 镜面上的场点
+    const ys = []; for (let k = 0; k < 7; k++) ys.push(-1.95 + k * 0.65);
+    const fs = ys.map(y => field([0, y, 0]));
+    const mags = fs.map(len).sort((a, b) => a - b), ref = mags[3] || 1;
+    let dev = 0;
+    fs.forEach((f, k) => {
+      const m = len(f), u = unit(f), L = 0.55 * Math.tanh(m / ref), y = ys[k];
+      const wrong = sc.kind === 'E' || sc.rel < 0 ? Math.abs(u[0]) : Math.abs(u[1]);
+      dev = Math.max(dev, Math.asin(clamp(wrong, 0, 1)) / D2R);
+      arrow(g, V.X(0), V.Y(y), V.X(u[0] * L), V.Y(y + u[1] * L), { c: 'var(--fg)', w: 3, h: 12 });
+      circ(g, V.X(0), V.Y(y), 3.6, `fill:${mcol};stroke:var(--card);stroke-width:1.5`);
+    });
+    // 场源
+    for (const [x, y, q] of st.src) {
+      const X = V.X(x), Y = V.Y(y);
+      if (isE) {
+        const c = q > 0 ? 'var(--w)' : 'var(--a)', r = 9 + 4 * Math.abs(q);
+        circ(g, X, Y, r, `fill:${c};opacity:.9`);
+        txt(g, X, Y + 5.5, q > 0 ? '+' : '−', F(16, 'var(--card)', 'font-weight:700'), 'middle');
+      } else {
+        circ(g, X, Y, 11, 'fill:var(--card);stroke:var(--fg);stroke-width:2');
+        if (q > 0) circ(g, X, Y, 3, 'fill:var(--fg)');
+        else { ln(g, X - 6, Y - 6, X + 6, Y + 6, 'stroke:var(--fg);stroke-width:2'); ln(g, X - 6, Y + 6, X + 6, Y - 6, 'stroke:var(--fg);stroke-width:2'); }
+      }
+    }
+    txt(g, 18, 488, isE ? '点电荷（纸面内）' : '⊙ 出纸面  ⊗ 入纸面（无限长直导线）', F(12, 'var(--muted)'));
+    txt(g, 882, 488, isE ? '箭头：库仑定律求和' : '箭头：毕–萨定律离散求和', F(12, 'var(--muted)'), 'end');
+    // 文字
+    const dv = `<span class="mono na">（镜面上最大偏差 ${dev.toFixed(dev < 0.05 ? 2 : 1)}°）</span>`;
+    const A = {
+      symE: '对称电荷 → 镜面上 <b>E ∥ 镜面</b>',
+      symB: '对称电流 → 镜面上 <b>B ⊥ 镜面</b>',
+      antiB: '反对称电流 → 镜面上 <b>B ∥ 镜面</b>'
+    };
+    const C3 = {
+      symE: 'E′ = σE，镜面上的点不动 ⇒ E⊥ = −E⊥ = 0',
+      symB: 'B′ = −σB ⇒ 镜面上 B∥ = −B∥ = 0',
+      antiB: '电流先取反再镜像：B′ = +σB ⇒ 镜面上 B⊥ = 0'
+    };
+    const broken = { symE: '对称已破坏 → 镜面上 E 不再 ∥ 镜面', symB: '对称已破坏 → 镜面上 B 不再 ⊥ 镜面', antiB: '反对称已破坏 → 镜面上 B 不再 ∥ 镜面' };
+    $('#c3a').innerHTML = (dev > 0.05 ? broken[st.s] : A[st.s]) + ' ' + dv;
+    $('#c3b').innerHTML = '<span class="mono">(σa)×(σb) = −σ(a×b)</span>　B ∝ I dl × r 比 E 多一个负号';
+    $('#c3c').textContent = C3[st.s];
+  }
+  dragger(svg, hit, move, render);
+  $('#p3scene').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    load(b.dataset.s); setPressed($('#p3scene'), 's', b.dataset.s); rebuild(); render();
+  });
+  $('#p3link').onchange = e => {
+    st.link = e.target.checked;
+    if (st.link) { // 恢复严格镜像
+      for (let i = 0; i < st.src.length; i += 2) { const a = st.src[i], b = st.src[i + 1]; b[0] = -a[0]; b[1] = a[1]; }
+      rebuild();
+    }
+    render();
+  };
+  setPressed($('#p3scene'), 's', 'symE');
+  rebuild();
+  return { render };
+})();
+
+/* ================= 面板 4：典型系统（3D） ================= */
+// 介质板：二维磁化（导线沿 y，截面在 xz 面），格点等效磁偶极子自洽迭代
+function buildSlab(wireSegs, x0, x1, z0, z1, mur, h) {
+  const chi = mur - 1, cells = [];
+  for (let x = x0 + h / 2; x < x1; x += h) for (let z = z0 + h / 2; z < z1; z += h) cells.push([x, z]);
+  const n = cells.length, A = h * h;
+  const H0 = cells.map(([x, z]) => { const b = bAt(wireSegs, [x, 0, z]); return [b[0], b[2]]; });
+  const G = new Float64Array(n * n * 4);  // 2×2 相互作用张量
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    if (i === j) continue;
+    const rx = cells[i][0] - cells[j][0], rz = cells[i][1] - cells[j][1], r2 = rx * rx + rz * rz;
+    const ux = rx / Math.sqrt(r2), uz = rz / Math.sqrt(r2), k = A / (2 * PI * r2), o = (i * n + j) * 4;
+    G[o] = k * (2 * ux * ux - 1); G[o + 1] = k * 2 * ux * uz; G[o + 2] = k * 2 * ux * uz; G[o + 3] = k * (2 * uz * uz - 1);
+  }
+  const c = chi / (1 + chi * 0.5);          // 方形格点自退磁因子 1/2
+  let M = H0.map(([hx, hz]) => [c * hx, c * hz]);
+  for (let it = 0; it < 400; it++) {
+    let dmax = 0;
+    const Mn = M.map((_, i) => {
+      let hx = H0[i][0], hz = H0[i][1];
+      for (let j = 0; j < n; j++) { const o = (i * n + j) * 4; hx += G[o] * M[j][0] + G[o + 1] * M[j][1]; hz += G[o + 2] * M[j][0] + G[o + 3] * M[j][1]; }
+      return [0.5 * M[i][0] + 0.5 * c * hx, 0.5 * M[i][1] + 0.5 * c * hz];
+    });
+    for (let i = 0; i < n; i++) dmax = Math.max(dmax, Math.abs(Mn[i][0] - M[i][0]), Math.abs(Mn[i][1] - M[i][1]));
+    M = Mn;
+    if (dmax < 1e-9) break;
+  }
+  return {
+    box: [x0, x1, z0, z1], mur,
+    B(P) { // 板外：B = H_导线 + Σ 偶极子场
+      let bx = 0, bz = 0;
+      for (let j = 0; j < n; j++) {
+        const rx = P[0] - cells[j][0], rz = P[2] - cells[j][1], r2 = rx * rx + rz * rz;
+        const ux = rx / Math.sqrt(r2), uz = rz / Math.sqrt(r2), md = M[j][0] * ux + M[j][1] * uz, k = A / (2 * PI * r2);
+        bx += k * (2 * md * ux - M[j][0]); bz += k * (2 * md * uz - M[j][1]);
+      }
+      return [bx, 0, bz];
+    }
+  };
+}
+
+const P4 = (() => {
+  const svg = $('#svg4'), g = E('g', {}, svg), S = 76, CX = 450, CY = 262;
+  const cam = { yaw: -38 * D2R, pitch: 22 * D2R };
+  function pj(p) {
+    const c = Math.cos(cam.yaw), s = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+    const x1 = p[0] * c + p[2] * s, z1 = -p[0] * s + p[2] * c;
+    return [CX + x1 * S, CY - (p[1] * cp - z1 * sp) * S, p[1] * sp + z1 * cp];
+  }
+  const X = [1, 0, 0], Y = [0, 1, 0], Z = [0, 0, 1], O = [0, 0, 0];
+  const loopPts = (c, u, v, R, N) => { const a = []; for (let k = 0; k <= N; k++) { const t = 2 * PI * k / N; a.push(add(c, add(mul(u, R * Math.cos(t)), mul(v, R * Math.sin(t))))); } return a; };
+  const line3 = (g2, a, b, st) => { const A = pj(a), B = pj(b); ln(g2, A[0], A[1], B[0], B[1], st); };
+  const poly3 = (g2, pts, st, closed) => poly(g2, pts.map(pj), st, closed);
+  const arrow3 = (g2, a, b, o) => { const A = pj(a), B = pj(b); arrow(g2, A[0], A[1], B[0], B[1], o); };
+  const CUR = { c: 'var(--fg)', w: 1.8, h: 9 };
+  // 在圆环“最靠近观察者”的位置画电流方向
+  function loopArrow(g2, c, u, v, R) {
+    let best = 0, bz = -1e9;
+    for (let k = 0; k < 72; k++) { const t = 2 * PI * k / 72, z = pj(add(c, add(mul(u, R * Math.cos(t)), mul(v, R * Math.sin(t)))))[2]; if (z > bz) { bz = z; best = t; } }
+    const p = add(c, add(mul(u, R * Math.cos(best)), mul(v, R * Math.sin(best))));
+    const d = add(mul(u, -Math.sin(best)), mul(v, Math.cos(best)));
+    arrow3(g2, add(p, mul(d, -0.18)), add(p, mul(d, 0.22)), CUR);
+  }
+  function wireDraw(g2, p, d, half, I) {
+    line3(g2, add(p, mul(d, -half)), add(p, mul(d, half)), `stroke:var(--fg);stroke-width:${I > 0 ? 2.2 : 1};opacity:${I > 0 ? 1 : .55}`);
+  }
+  const SYS = {
+    wire: {
+      name: '无限长直导线',
+      build() {
+        const S0 = []; addLine(S0, O, Y, 40, 1600, 1);
+        return { segs: Float64Array.from(S0) };
+      },
+      planes: [
+        { kind: 'sym', p0: O, n: Z, e1: X, e2: Y, w: 2.6, h: 2.3, label: '对称面 z=0（含导线）' },
+        { kind: 'sym', p0: O, n: X, e1: Z, e2: Y, w: 2.3, h: 2.3, label: '对称面 x=0（含导线）' },
+        { kind: 'anti', p0: O, n: Y, e1: X, e2: Z, w: 2.6, h: 2.3, label: '反对称面 y=0（⊥导线）' }],
+      P: [{ n: 'P', p: [1.1, 0, 0] }], Q: { p: [0.8, 0.8, 1.0], plane: 1 },
+      lineLabel: 'ẑ（绕导线的切向）',
+      draw(g2) {
+        wireDraw(g2, O, Y, 2.6, 1);
+        for (const y of [-1.8, 1.4]) arrow3(g2, [0, y, 0], [0, y + 0.45, 0], { c: 'var(--fg)', w: 2.2, h: 11 });
+        txt(g2, pj([0, 2.6, 0])[0] + 6, pj([0, 2.6, 0])[1], 'I', F(15, 'var(--fg)', 'font-style:italic'));
+      }
+    },
+    sol: {
+      name: '有限长螺线管 ≈ 磁化棒',
+      build() {
+        const S0 = [];
+        for (let k = 0; k < 24; k++) addLoop(S0, [-2 + (k + 0.5) * 4 / 24, 0, 0], Y, Z, 0.8, 48, 1);
+        return { segs: Float64Array.from(S0) };
+      },
+      planes: [
+        { kind: 'sym', p0: O, n: X, e1: Z, e2: Y, w: 1.7, h: 1.7, label: '中垂面 = 对称面' },
+        { kind: 'anti', p0: O, n: Z, e1: X, e2: Y, w: 3.1, h: 1.7, label: '过轴平面 = 反对称面' }],
+      P: [{ n: 'P', p: [0, 0.4, 0] }, { n: 'P₂', p: [0, 1.3, 0] }], Q: { p: [2.4, 0.7, 0], plane: 0 },
+      lineLabel: 'x̂（轴向）',
+      draw(g2) {
+        for (let k = 0; k < 24; k++) {
+          const c = [-2 + (k + 0.5) * 4 / 24, 0, 0];
+          poly3(g2, loopPts(c, Y, Z, 0.8, 48), 'fill:none;stroke:var(--fg);stroke-width:1;opacity:.45');
+          if (k % 5 === 2) loopArrow(g2, c, Y, Z, 0.8);
+        }
+        line3(g2, [-3, 0, 0], [3, 0, 0], 'stroke:var(--muted);stroke-width:1;stroke-dasharray:6 4');
+      }
+    },
+    tor: {
+      name: '螺绕环',
+      build() {
+        const S0 = [];
+        for (let k = 0; k < 24; k++) { const f = 2 * PI * k / 24, r = [Math.cos(f), 0, Math.sin(f)]; addLoop(S0, mul(r, 1.8), r, Y, 0.55, 32, 1); }
+        return { segs: Float64Array.from(S0) };
+      },
+      planes: [
+        { kind: 'sym', p0: O, n: Z, e1: X, e2: Y, w: 2.9, h: 1.2, label: '过轴平面 = 对称面' },
+        { kind: 'anti', p0: O, n: Y, e1: X, e2: Z, w: 2.9, h: 2.9, label: '环面 = 反对称面' }],
+      P: [{ n: 'P', p: [2.0, 0, 0] }, { n: 'P₂', p: [3.0, 0, 0] }],
+      Q: { p: [1.8 * Math.cos(40 * D2R), 0.25, 1.8 * Math.sin(40 * D2R)], plane: 0 },
+      lineLabel: 'ẑ（绕环方向）',
+      draw(g2) {
+        for (let k = 0; k < 24; k++) {
+          const f = 2 * PI * k / 24, r = [Math.cos(f), 0, Math.sin(f)];
+          poly3(g2, loopPts(mul(r, 1.8), r, Y, 0.55, 32), 'fill:none;stroke:var(--fg);stroke-width:1;opacity:.45');
+          if (k % 4 === 1) loopArrow(g2, mul(r, 1.8), r, Y, 0.55);
+        }
+        line3(g2, [0, -1.6, 0], [0, 1.6, 0], 'stroke:var(--muted);stroke-width:1;stroke-dasharray:6 4');
+      }
+    },
+    coax: {
+      name: '同轴圆柱',
+      build() {
+        const S0 = []; addLine(S0, O, Y, 40, 1600, 1);
+        for (let k = 0; k < 24; k++) { const f = 2 * PI * k / 24; addLine(S0, [1.4 * Math.cos(f), 0, 1.4 * Math.sin(f)], Y, 40, 800, -1 / 24); }
+        return { segs: Float64Array.from(S0) };
+      },
+      planes: [
+        { kind: 'sym', p0: O, n: Z, e1: X, e2: Y, w: 2.4, h: 2.3, label: '含轴平面 = 对称面' },
+        { kind: 'anti', p0: O, n: Y, e1: X, e2: Z, w: 2.4, h: 2.4, label: '⊥轴平面 = 反对称面' }],
+      P: [{ n: 'P', p: [0.8, 0, 0] }, { n: 'P₂', p: [2.0, 0, 0] }], Q: { p: [0.6, 0.8, 0.5], plane: 0 },
+      lineLabel: 'ẑ（绕轴切向）',
+      draw(g2) {
+        wireDraw(g2, O, Y, 2.3, 1);
+        arrow3(g2, [0, 1.3, 0], [0, 1.75, 0], { c: 'var(--fg)', w: 2.2, h: 11 });
+        for (let k = 0; k < 24; k += 2) { const f = 2 * PI * k / 24; wireDraw(g2, [1.4 * Math.cos(f), 0, 1.4 * Math.sin(f)], Y, 2.3, -1); }
+        for (const y of [-2.3, 2.3]) poly3(g2, loopPts([0, y, 0], X, Z, 1.4, 64), 'fill:none;stroke:var(--fg);stroke-width:1;opacity:.55');
+        let best = 0, bz = -1e9;
+        for (let k = 0; k < 24; k++) { const f = 2 * PI * k / 24, z = pj([1.4 * Math.cos(f), 0, 1.4 * Math.sin(f)])[2]; if (z > bz) { bz = z; best = f; } }
+        const b = [1.4 * Math.cos(best), 0, 1.4 * Math.sin(best)];
+        arrow3(g2, add(b, [0, 1.75, 0]), add(b, [0, 1.3, 0]), { c: 'var(--fg)', w: 1.6, h: 10, op: .8 });
+      }
+    },
+    slab: {
+      name: '导线 + 磁介质板（破缺）',
+      build() {
+        const S0 = []; addLine(S0, O, Y, 40, 1600, 1);
+        const segs = Float64Array.from(S0);
+        return { segs, slab: buildSlab(segs, 1.4, 2.4, -2, 2, 4, 0.125) };
+      },
+      planes: [
+        { kind: 'sym', p0: O, n: Z, e1: X, e2: Y, w: 2.6, h: 2.3, label: '对称面 z=0（仍成立）' },
+        { kind: 'broken', p0: O, n: X, e1: Z, e2: Y, w: 2.3, h: 2.3, label: 'x=0 不再是对称面' },
+        { kind: 'anti', p0: O, n: Y, e1: X, e2: Z, w: 2.6, h: 2.3, label: '反对称面 y=0（仍成立）' }],
+      P: [{ n: 'P', p: [1.1, 0, 0] }], Q: { p: [0.8, 0.8, 1.0], plane: 1 },
+      lineLabel: 'ẑ',
+      draw(g2) {
+        const [x0, x1, z0, z1] = [1.4, 2.4, -2, 2], y0 = -2.3, y1 = 2.3;
+        const v = (a, b, c) => [a ? x1 : x0, b ? y1 : y0, c ? z1 : z0];
+        const faces = [[v(0, 0, 0), v(0, 1, 0), v(0, 1, 1), v(0, 0, 1)], [v(1, 0, 0), v(1, 1, 0), v(1, 1, 1), v(1, 0, 1)],
+        [v(0, 0, 0), v(1, 0, 0), v(1, 1, 0), v(0, 1, 0)], [v(0, 0, 1), v(1, 0, 1), v(1, 1, 1), v(0, 1, 1)],
+        [v(0, 1, 0), v(1, 1, 0), v(1, 1, 1), v(0, 1, 1)], [v(0, 0, 0), v(1, 0, 0), v(1, 0, 1), v(0, 0, 1)]];
+        for (const f of faces) poly3(g2, f, 'fill:var(--slab);fill-opacity:.08;stroke:var(--slab);stroke-width:1', true);
+        const t = pj([x1, y1, z0]); txt(g2, t[0] + 6, t[1] - 4, '磁介质板 μr = 4', F(12, 'var(--slab)'));
+        SYS.wire.draw(g2);
+      }
+    }
+  };
+  let cur = 'wire';
+  const cache = {};
+  function data(k) {
+    if (cache[k]) return cache[k];
+    const sys = SYS[k], b = sys.build();
+    const B = P => { const v = bAt(b.segs, P); return b.slab ? add(v, b.slab.B(P)) : v; };
+    const Ps = sys.P.map(o => ({ ...o, B: B(o.p) }));
+    const pl = sys.planes[sys.Q.plane], Qp = reflP(sys.Q.p, pl.p0, pl.n);
+    return (cache[k] = { Ps, Q: sys.Q.p, Qp, BQ: B(sys.Q.p), BQp: B(Qp), pl });
+  }
+  // 由经过 P 的对称面 / 反对称面推出 B 所在直线
+  function lineAt(sys, p) {
+    const th = sys.planes.filter(pl => pl.kind !== 'broken' && Math.abs(dot(sub(p, pl.p0), pl.n)) < 1e-9);
+    const sym = th.filter(q => q.kind === 'sym'), anti = th.filter(q => q.kind === 'anti');
+    if (sym.length) return { dir: sym[0].n, why: anti.length ? 'B ⊥ 对称面，且在反对称面内' : 'B ⊥ 对称面' };
+    if (anti.length >= 2) return { dir: unit(cross(anti[0].n, anti[1].n)), why: 'B 同在两个反对称面内' };
+    return null;
+  }
+  const COL = { sym: 'var(--sym)', anti: 'var(--anti)', broken: 'var(--muted)' };
+  function render() {
+    clear(g);
+    const sys = SYS[cur], d = data(cur);
+    // 平面
+    for (const pl of sys.planes) {
+      const cs = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => add(pl.p0, add(mul(pl.e1, a * pl.w), mul(pl.e2, b * pl.h))));
+      const c = COL[pl.kind];
+      poly3(g, cs, pl.kind === 'broken'
+        ? `fill:none;stroke:${c};stroke-width:1.3;stroke-dasharray:6 5`
+        : `fill:${c};fill-opacity:.09;stroke:${c};stroke-width:1;stroke-opacity:.6`, true);
+      const lp = cs.map(pj).reduce((a, b) => (b[1] < a[1] ? b : a));
+      txt(g, lp[0], lp[1] - 7, (pl.kind === 'broken' ? '✗ ' : '') + pl.label, F(12, c), 'middle');
+    }
+    sys.draw(g);
+    // 场的标度
+    // P 组与 Q 组各自定标（只比较方向与组内大小）
+    const ref = Math.max(...d.Ps.map(o => len(o.B)));
+    const kq = 0.85 / Math.max(len(d.BQ), len(d.BQp));
+    const dot3 = (p, name, dx) => { const s = pj(p); circ(g, s[0], s[1], 3.8, 'fill:var(--fg)'); txt(g, s[0] + (dx || 7), s[1] + 15, name, F(14, 'var(--fg)', 'font-weight:600')); };
+    // P：直线结论
+    let devP = 0;
+    for (const o of d.Ps) {
+      const ln3 = lineAt(sys, o.p);
+      if (ln3) line3(g, add(o.p, mul(ln3.dir, -1.3)), add(o.p, mul(ln3.dir, 1.3)), 'stroke:var(--muted);stroke-width:1.2;stroke-dasharray:3 4');
+      const m = len(o.B);
+      if (m < 0.04 * ref) {
+        const s = pj(o.p); txt(g, s[0] + 8, s[1] - 8, '|B| ≈ 0', F(12, 'var(--muted)'));
+      } else arrow3(g, o.p, add(o.p, mul(unit(o.B), 1.05 * Math.sqrt(m / ref))), { c: 'var(--a)', w: 3, h: 13 });  // 长度 ∝ √|B|，弱场也看得见
+      if (o.n === 'P' && ln3) devP = Math.acos(clamp(Math.abs(dot(unit(o.B), ln3.dir)), 0, 1)) / D2R;
+      dot3(o.p, o.n);
+    }
+    // Q 与 Q′：镜像关系
+    const pl = d.pl, n = pl.n;
+    const pred = pl.kind === 'anti' ? reflV(d.BQ, n) : mul(reflV(d.BQ, n), -1);   // 对称面：B′ = −σB
+    line3(g, d.Q, d.Qp, 'stroke:var(--muted);stroke-width:1;stroke-dasharray:1 4');
+    arrow3(g, d.Q, add(d.Q, mul(d.BQ, kq)), { c: 'var(--a)', w: 3, h: 13 });
+    arrow3(g, d.Qp, add(d.Qp, mul(d.BQp, kq)), { c: 'var(--a)', w: 3, h: 13 });
+    arrow3(g, d.Qp, add(d.Qp, mul(pred, kq)), { c: 'var(--w)', w: 2, h: 15, dash: '5 3' });
+    dot3(d.Q, 'Q'); dot3(d.Qp, 'Q′');
+    // 坐标轴
+    const ax = [60, 470];
+    for (const [v, nm] of [[X, 'x'], [Y, 'y'], [Z, 'z']]) {
+      const a = pj([0, 0, 0]), b = pj(mul(v, 0.45)), dx = b[0] - a[0], dy = b[1] - a[1];
+      arrow(g, ax[0], ax[1], ax[0] + dx, ax[1] + dy, { c: 'var(--muted)', w: 1.3, h: 7 });
+      txt(g, ax[0] + dx * 1.35, ax[1] + dy * 1.35 + 4, nm, F(12, 'var(--muted)', 'font-style:italic'), 'middle');
+    }
+    // 图例
+    const lg = (x, c, s) => { E('rect', { x, y: 16, width: 13, height: 13, rx: 2, style: `fill:${c};opacity:.35` }, g); txt(g, x + 18, 27, s, F(12, 'var(--muted)')); };
+    lg(18, 'var(--sym)', '对称面'); lg(88, 'var(--anti)', '反对称面');
+    arrow(g, 178, 23, 204, 23, { c: 'var(--a)', w: 2.6, h: 10 }); txt(g, 210, 27, 'B（毕–萨求和）', F(12, 'var(--muted)'));
+    arrow(g, 316, 23, 342, 23, { c: 'var(--w)', w: 2, h: 11, dash: '5 3' }); txt(g, 348, 27, '由 Q 镜像预测', F(12, 'var(--muted)'));
+    // 文字
+    const lP = lineAt(sys, d.Ps[0].p);
+    $('#c4a').innerHTML = `P：${lP.why} ⇒ B 沿 <b>${sys.lineLabel}</b> <span class="mono na">（数值偏差 ${devP.toFixed(2)}°）</span>`;
+    const err = len(sub(d.BQp, pred)) / len(d.BQ) * 100;
+    const pct = err < 0.01 ? '< 0.01%' : err.toFixed(err < 1 ? 2 : 0) + '%';
+    if (pl.kind === 'broken') {
+      $('#c4b').innerHTML = `Q↔Q′ 关于 x=0：介质板破坏了这个对称面 ⇒ 镜像关系失效 <span class="err">✗ 偏差 ${pct}</span>`;
+    } else {
+      const rel = pl.kind === 'sym' ? '<b>B⊥ 相等，B∥ 反号</b>' : '<b>B∥ 相等，B⊥ 反号</b>';
+      $('#c4b').innerHTML = `Q↔Q′ 关于${pl.kind === 'sym' ? '对称面' : '反对称面'}：${rel} <span class="ok">✓ 偏差 ${pct}</span>`;
+    }
+    const s = 1 / Math.max(len(d.BQ), len(d.BQp)), cmp = B => `⊥ ${fmt(dot(B, n) * s)}  ∥ (${fmt(dot(B, pl.e1) * s)}, ${fmt(dot(B, pl.e2) * s)})`;
+    $('#c4c').textContent = `B(Q)  ${cmp(d.BQ)}　　B(Q′)  ${cmp(d.BQp)}`;
+  }
+  // 视角拖动
+  let drag = null;
+  svg.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw: cam.yaw, pitch: cam.pitch }; svg.setPointerCapture(e.pointerId); svg.style.cursor = 'grabbing'; });
+  svg.addEventListener('pointermove', e => {
+    if (!drag) return;
+    cam.yaw = drag.yaw + (e.clientX - drag.x) * 0.008;
+    cam.pitch = clamp(drag.pitch + (e.clientY - drag.y) * 0.008, -1.45, 1.45);
+    render();
+  });
+  const end = () => { drag = null; svg.style.cursor = 'grab'; };
+  svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+  svg.addEventListener('dblclick', () => { cam.yaw = -38 * D2R; cam.pitch = 22 * D2R; render(); });
+  svg.style.cursor = 'grab';
+  const box = $('#p4sys');
+  for (const k in SYS) {
+    const b = document.createElement('button'); b.textContent = SYS[k].name; b.dataset.s = k;
+    b.onclick = () => { cur = k; setPressed(box, 's', k); render(); };
+    box.appendChild(b);
+  }
+  setPressed(box, 's', cur);
+  return { render, data, SYS, lineAt };
+})();
+
+/* ================= 面板 5：能给出什么、不能给出什么 ================= */
+const P5 = (() => {
+  const svg = $('#svg5'), g = E('g', {}, svg), V = view(300, 250, 66);
+  const st = { L: 4, R: 0.6, eps: 0.01, sgn: 1, show: 'B' };
+  let segs = null, key = '';
+  function rebuild() {
+    const k = st.L + '|' + st.sgn; if (k === key) return; key = k;
+    const S = [], N = Math.round(st.L / 0.04), dx = st.L / N;
+    // 均匀磁化 M → 侧面等效面电流 K = M × n，离散成一串圆环
+    for (let i = 0; i < N; i++) addLoop(S, [-st.L / 2 + (i + 0.5) * dx, 0, 0], [0, 1, 0], [0, 0, 1], st.R, 48, st.sgn * dx);
+    segs = Float64Array.from(S);
+  }
+  const inside = p => Math.abs(p[0]) < st.L / 2 && Math.hypot(p[1], p[2]) < st.R;
+  const Bf = p => bAt(segs, p);
+  const Hf = p => { const b = Bf(p); return inside(p) ? sub(b, [st.sgn, 0, 0]) : b; };   // H = B/μ0 − M
+  function render() {
+    rebuild(); clear(g);
+    const L = st.L, R = st.R, x2 = L / 2;
+    // 左：场图
+    E('rect', { x: V.X(-x2), y: V.Y(R), width: L * V.s, height: 2 * R * V.s, rx: 3, style: 'fill:var(--slab);fill-opacity:.14;stroke:var(--slab);stroke-width:1.2' }, g);
+    ln(g, V.X(-4.4), V.Y(0), V.X(4.4), V.Y(0), 'stroke:var(--anti);stroke-width:1;stroke-dasharray:6 4;opacity:.8');
+    ln(g, V.X(0), V.Y(-3.6), V.X(0), V.Y(3.6), 'stroke:var(--sym);stroke-width:1;stroke-dasharray:6 4;opacity:.8');
+    txt(g, V.X(-4.35), V.Y(0) - 6, '过轴平面', F(11, 'var(--anti)'));
+    txt(g, V.X(0) + 5, V.Y(3.45), '中垂面', F(11, 'var(--sym)'));
+    const fld = st.show === 'B' ? Bf : Hf, col = st.show === 'B' ? 'var(--a)' : 'var(--w)';
+    const pts = [];
+    for (let x = -4.2; x <= 4.21; x += 0.4) for (let y = -3.4; y <= 3.41; y += 0.4) pts.push([x, y, 0]);
+    const fs = pts.map(fld), mx = Math.max(...fs.map(len));
+    pts.forEach((p, i) => {
+      const m = len(fs[i]); if (m < 1e-9) return;
+      const u = unit(fs[i]), h = 0.15, op = 0.15 + 0.75 * clamp((Math.log10(m / mx) + 2) / 2, 0, 1);
+      arrow(g, V.X(p[0] - u[0] * h), V.Y(p[1] - u[1] * h), V.X(p[0] + u[0] * h), V.Y(p[1] + u[1] * h), { c: col, w: 1.4, h: 6, op });
+    });
+    arrow(g, V.X(-0.5 * st.sgn), V.Y(-0.32), V.X(0.5 * st.sgn), V.Y(-0.32), { c: 'var(--fg)', w: 2.4, h: 11 });
+    txt(g, V.X(0), V.Y(-0.32) + 18, 'M', F(14, 'var(--fg)', 'font-weight:600;font-style:italic'), 'middle');
+    // 放大框标记
+    E('rect', { x: V.X(x2) - 14, y: V.Y(0) - 14, width: 28, height: 28, style: 'fill:none;stroke:var(--muted);stroke-width:1' }, g);
+    ln(g, V.X(x2) + 14, V.Y(0) - 14, 640, 70, 'stroke:var(--muted);stroke-width:.8;stroke-dasharray:2 3');
+    ln(g, V.X(x2) + 14, V.Y(0) + 14, 640, 430, 'stroke:var(--muted);stroke-width:.8;stroke-dasharray:2 3');
+    txt(g, 14, 22, st.show === 'B' ? 'B 的方向（数值计算）' : 'H = B − M 的方向（数值计算）', F(12, 'var(--muted)'));
+    // 右：端面放大
+    E('rect', { x: 640, y: 70, width: 244, height: 360, rx: 8, style: 'fill:var(--bg);stroke:var(--line)' }, g);
+    E('rect', { x: 640, y: 70, width: 122, height: 360, style: 'fill:var(--slab);fill-opacity:.14' }, g);
+    ln(g, 762, 70, 762, 430, 'stroke:var(--slab);stroke-width:2');
+    txt(g, 701, 92, '棒内', F(12, 'var(--muted)'), 'middle'); txt(g, 823, 92, '棒外', F(12, 'var(--muted)'), 'middle');
+    txt(g, 762, 450, '端面（放大）', F(12, 'var(--muted)'), 'middle');
+    const pin = [x2 - st.eps, 0, 0], pout = [x2 + st.eps, 0, 0];
+    const Bi = Bf(pin)[0], Bo = Bf(pout)[0], Hi = Hf(pin)[0], Ho = Hf(pout)[0];
+    const K = 110;
+    const row = (y, vi, vo, c, nm) => {
+      txt(g, 652, y - 30, nm, F(14, c, 'font-weight:600;font-style:italic'));
+      for (const [x, v] of [[722, vi], [802, vo]]) {
+        ln(g, x - 50, y, x + 50, y, 'stroke:var(--grid);stroke-width:1');
+        circ(g, x, y, 3.5, 'fill:var(--fg)');
+        arrow(g, x, y, x + v * K, y, { c, w: 3, h: 12 });
+        txt(g, x, y + 24, fmt(v), 'font:12px var(--mono);fill:' + c, 'middle');
+      }
+    };
+    row(185, Bi, Bo, 'var(--a)', 'B');
+    row(345, Hi, Ho, 'var(--w)', 'H');
+    // 文字
+    $('#c5a').innerHTML = '<span class="ok">✓ 能给出</span>：方向所在的直线、哪些点的场相等';
+    $('#c5b').innerHTML = '<span class="err">✗ 不能给出</span>：正负号（用右手定则）、大小（用计算）——反转 M、改棒长，直线都不变';
+    $('#c5c').innerHTML = `端面内外：<span class="ea">B 内 ${fmt(Bi)} ≈ B 外 ${fmt(Bo)}</span>，<span class="ew">H 内 ${fmt(Hi)}、H 外 ${fmt(Ho)} 反号</span>（都沿轴）`;
+    $('#p5Lv').textContent = st.L.toFixed(1);
+    $('#p5ev').textContent = st.eps.toFixed(3);
+  }
+  $('#p5show').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    st.show = b.dataset.f; setPressed($('#p5show'), 'f', st.show); render();
+  });
+  $('#p5flip').onclick = () => { st.sgn *= -1; render(); };
+  $('#p5L').oninput = e => { st.L = +e.target.value; render(); };
+  $('#p5e').oninput = e => { st.eps = +e.target.value; render(); };
+  return { render, _st: st, Bf, Hf };
+})();
+
+/* ================= 导航 / 主题 ================= */
+const panels = [...document.querySelectorAll('section.panel')];
+const renders = [P1.render, P2.render, P3.render, P4.render, P5.render];
+let curP = 0;
+function show(i) {
+  curP = clamp(i, 0, 4);
+  panels.forEach((p, k) => { p.hidden = k !== curP; });
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-current', String(+t.dataset.i === curP)));
+  $('#prev').disabled = curP === 0; $('#next').disabled = curP === 4;
+  renders[curP]();
+  history.replaceState(null, '', '#' + (curP + 1));
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => show(+t.dataset.i));
+$('#prev').onclick = () => show(curP - 1);
+$('#next').onclick = () => show(curP + 1);
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input')) return;
+  if (e.key === 'ArrowRight') show(curP + 1);
+  if (e.key === 'ArrowLeft') show(curP - 1);
+});
+const THEMES = ['auto', 'light', 'dark'], TL = { auto: '◐ 自动', light: '☀ 浅色', dark: '☾ 深色' };
+let theme = 'auto';
+try { theme = localStorage.getItem('em-sym-theme') || 'auto'; } catch (e) { /* 无存储时用默认 */ }
+function applyTheme(t) {
+  theme = THEMES.includes(t) ? t : 'auto';
+  if (theme === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
+  $('#theme').textContent = TL[theme];
+  try { localStorage.setItem('em-sym-theme', theme); } catch (e) { /* 忽略 */ }
+}
+$('#theme').onclick = () => applyTheme(THEMES[(THEMES.indexOf(theme) + 1) % 3]);
+applyTheme(theme);
+show((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>
