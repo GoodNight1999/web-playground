@@ -1,4 +1,3 @@
-import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, Timer } from 'claude-code'
 
 const PANE = 'desktop-pet'
@@ -12,9 +11,6 @@ const FRAME_PIXELS = 240
 const MAX_WIDTH = 220
 const IDLE_AFTER_MS = 8000
 
-const frame = atom({ plugin: 'desktop-pet', key: 'frame' } as const, 0)
-const isDancing = atom({ plugin: 'desktop-pet', key: 'isDancing' } as const, true)
-const bubble = atom({ plugin: 'desktop-pet', key: 'bubble' } as const, '你好呀～')
 
 const PAT_LINES = [
   '诶嘿嘿～',
@@ -39,8 +35,12 @@ const TOOL_LINES: Record<string, string> = {
   Agent: '叫小伙伴来帮忙！',
 }
 
-// 模块变量在热重载时会清空，session.start 会重新读一遍
+// 桌面 App 自带的 Claude Code 2.1.280 还没有 $.state，所以画面用到的值放在模块变量里，
+// 改了之后用 $.ui.invalidate 让面板重画。模块变量在热重载时会清空，session.start 会重新读帧图
 let frames: string[] = []
+let frame = 0
+let isDancing = true
+let bubble = '你好呀～'
 let ticker: Timer | undefined
 let idleTimer: Timer | undefined
 // 用户亲手关掉面板后，发消息时就不再自动弹出来，等 /pet 再叫
@@ -75,21 +75,24 @@ function stopDancing() {
   ticker = undefined
 }
 
-async function startDancing($: EngineInterface) {
-  if (ticker || frames.length === 0 || !(await read($, isDancing))) {
+function startDancing($: EngineInterface) {
+  if (ticker || frames.length === 0 || !isDancing) {
     return
   }
   ticker = $.clock.every(FRAME_MS, () => {
-    void update($, frame, n => (n + 1) % frames.length)
+    frame = (frame + 1) % frames.length
+    $.ui.invalidate('ui.render')
   })
 }
 
 // 说一句话，过一会儿没新动静就回到发呆状态
-async function say($: EngineInterface, text: string) {
-  await update($, bubble, () => text)
+function say($: EngineInterface, text: string) {
+  bubble = text
+  $.ui.invalidate('ui.render')
   idleTimer?.cancel()
   idleTimer = $.clock.after(IDLE_AFTER_MS, () => {
-    void update($, bubble, () => pick(IDLE_LINES))
+    bubble = pick(IDLE_LINES)
+    $.ui.invalidate('ui.render')
   })
 }
 
@@ -99,19 +102,18 @@ async function showPane($: EngineInterface) {
   if (!panes.some(pane => pane.id === PANE && pane.isPlaced)) {
     await $.ui.open({ id: PANE, title: TITLE })
   }
-  await startDancing($)
+  startDancing($)
 }
 
-async function toggleDance($: EngineInterface) {
-  if (await read($, isDancing)) {
-    stopDancing()
-    await update($, isDancing, () => false)
-    await update($, frame, () => 0)
-    await say($, '休息一下～')
+function toggleDance($: EngineInterface) {
+  isDancing = !isDancing
+  if (isDancing) {
+    startDancing($)
+    say($, '继续跳舞！')
   } else {
-    await update($, isDancing, () => true)
-    await startDancing($)
-    await say($, '继续跳舞！')
+    stopDancing()
+    frame = 0
+    say($, '休息一下～')
   }
 }
 
@@ -123,7 +125,7 @@ export const register: Register = on => {
     })
     await loadFrames($)
     void $.ui.open({ id: PANE, title: TITLE })
-    await startDancing($)
+    startDancing($)
 
     return next(e)
   })
@@ -131,8 +133,8 @@ export const register: Register = on => {
   on('command.run', { command: 'pet' }, async $ => {
     isClosedByPerson = false
     await $.ui.open({ id: PANE, title: TITLE })
-    await startDancing($)
-    await say($, '我来啦！')
+    startDancing($)
+    say($, '我来啦！')
 
     return { text: '桌宠已经出来啦。' }
   })
@@ -151,42 +153,39 @@ export const register: Register = on => {
     if (!isClosedByPerson) {
       await showPane($)
     }
-    await say($, '收到～让我想想！')
+    say($, '收到～让我想想！')
 
     return next(e)
   })
 
-  on('tool.call', async ($, e, next) => {
-    await say($, TOOL_LINES[e.tool] ?? `正在用 ${e.tool}…`)
+  on('tool.call', ($, e, next) => {
+    say($, TOOL_LINES[e.tool] ?? `正在用 ${e.tool}…`)
 
     return next(e)
   })
 
-  on('turn.complete', async ($, e, next) => {
+  on('turn.complete', ($, e, next) => {
     const line =
       e.reason === 'answer' ? '搞定啦！✨' : e.reason === 'aborted' ? '诶，被打断了…' : '出错了 QAQ'
-    await say($, line)
+    say($, line)
 
     return next(e)
   })
 
-  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+  on('ui.render', { component: 'Pane', requestId: PANE }, ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e)
-    const text = await read($, bubble)
-    const dancing = await read($, isDancing)
-    const index = await read($, frame)
 
     const controls = (
       <Box flexDirection="row" gap={1}>
         <Button key="pat" label="摸摸头" hotkey="p" onPress={() => say($, pick(PAT_LINES))} />
-        <Button key="dance" label={dancing ? '休息' : '跳舞'} hotkey="d" onPress={() => toggleDance($)} />
+        <Button key="dance" label={isDancing ? '休息' : '跳舞'} hotkey="d" onPress={() => toggleDance($)} />
       </Box>
     )
 
     if (e.surface === 'terminal') {
       return (
         <Box flexDirection="column" gap={1}>
-          <Text>💬 {text}</Text>
+          <Text>💬 {bubble}</Text>
           <Text dimColor>桌宠的动画要在 Claude 桌面端才看得到。</Text>
           {controls}
         </Box>
@@ -194,13 +193,13 @@ export const register: Register = on => {
     }
 
     const { Svg } = $.ui.resolve(e)
-    const current = frames[dancing ? index % Math.max(frames.length, 1) : 0]
+    const current = frames[isDancing ? frame : 0]
     const width = Math.min(MAX_WIDTH, Math.max(120, e.props.bodyColumns * 7))
 
     return (
       <Box flexDirection="column" alignItems="center" gap={1}>
         <Box borderStyle="round" paddingX={1}>
-          <Text>{text}</Text>
+          <Text>{bubble}</Text>
         </Box>
         {current === undefined ? (
           <Text dimColor>桌宠加载中…</Text>

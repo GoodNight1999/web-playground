@@ -25,6 +25,16 @@ claude plugin install desktop-pet --marketplace GoodNight1999/web-playground
 
 装在 user 作用域后，之后新开的会话（包括桌面 App 的 Code 标签）都会自动带上桌宠。
 
+## 旧版 Claude Code 要先打开模组功能
+
+模组（hooks 模块）在 Claude Code 2.1.280 这类较早版本里还是抢先体验功能，可能默认关闭。用 `claude plugin test <desktop-pet 目录>` 检查：如果提示 `hooks modules are not turned on in this build yet`，就把环境变量 `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` 设为 `1`，然后重启 Claude 桌面 App。Windows 上可以运行：
+
+```
+setx CLAUDE_CODE_ENABLE_FUNCTION_HOOKS 1
+```
+
+只在云端会话里装是看不到面板的：云端会话没有接入桌面 App 的绘制界面，要装在本机并使用 Local 会话。
+
 ## 只在桌面端有动画
 
 动画用 `Svg` 元素画，桌面端、VS Code 和手机 App 都有；纯终端没有 `Svg`，面板里只显示气泡文字和按钮。

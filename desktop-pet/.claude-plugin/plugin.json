@@ -4,6 +4,5 @@
   "description": "在 Claude 桌面端的侧边面板里养一只会跳舞、会对 Claude 的工作做出反应的桌宠",
   "author": {
     "name": "GoodNight1999"
-  },
-  "types": "./types/index.d.ts"
+  }
 }
