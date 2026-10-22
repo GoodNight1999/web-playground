@@ -1,0 +1,13 @@
+{
+  "name": "web-playground",
+  "description": "web-playground 仓库附带的 Claude Code 模组",
+  "owner": {
+    "name": "GoodNight1999"
+  },
+  "plugins": [
+    {
+      "name": "desktop-pet",
+      "source": "./desktop-pet"
+    }
+  ]
+}
