@@ -26,3 +26,7 @@ npm run dev
 ```
 /plugin install desktop-pet --marketplace GoodNight1999/web-playground
 ```
+
+## Windows 桌面桌宠（desktop-pet-app）
+
+`desktop-pet-app/` 是一个独立浮在桌面上的桌宠：透明、置顶、可拖动，会读取本机 Claude Code 的会话记录，对 Claude 的工作做出反应。只用 Windows 自带的 PowerShell + WPF，双击 `启动桌宠.vbs` 即可运行，详见 [desktop-pet-app/README.md](desktop-pet-app/README.md)。
