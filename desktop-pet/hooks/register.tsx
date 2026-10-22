@@ -1,0 +1,251 @@
+import type { EngineInterface, Register, Timer } from 'claude-code'
+
+const PANE = 'desktop-pet'
+const TITLE = '桌宠'
+
+// 帧来自原 GIF：169 帧 / 30ms，隔 2 帧取 1 帧，速度保持不变
+const FRAME_COUNT = 57
+const FRAME_MS = 90
+// 帧图本身是 240×240，面板里按 CSS 像素缩放显示
+const FRAME_PIXELS = 240
+const MAX_WIDTH = 220
+// 面板显示不出来时，改在输入框上方画一个小号的
+const BAND_WIDTH = 96
+const IDLE_AFTER_MS = 8000
+
+
+const PAT_LINES = [
+  '诶嘿嘿～',
+  '帽子要被摸歪啦！',
+  '再摸就要收费了哦',
+  '（开心地转圈）',
+  '今天也要加油写代码！',
+  '摸头杀，效果拔群！',
+]
+
+const IDLE_LINES = ['（发呆中…）', '（哼着小曲）', '有什么要帮忙的吗？', '（打了个哈欠）']
+
+const TOOL_LINES: Record<string, string> = {
+  Bash: '噼里啪啦敲命令中…',
+  Read: '翻书中 📖',
+  Edit: '写写改改 ✏️',
+  Write: '奋笔疾书 ✏️',
+  Grep: '找找看在哪 🔍',
+  Glob: '找找看在哪 🔍',
+  WebSearch: '上网查资料 🌐',
+  WebFetch: '上网查资料 🌐',
+  Agent: '叫小伙伴来帮忙！',
+}
+
+// 桌面 App 自带的 Claude Code 2.1.280 还没有 $.state，所以画面用到的值放在模块变量里，
+// 改了之后用 $.ui.invalidate 让面板重画。模块变量在热重载时会清空，session.start 会重新读帧图
+let frames: string[] = []
+let frame = 0
+let isDancing = true
+let bubble = '你好呀～'
+let ticker: Timer | undefined
+let idleTimer: Timer | undefined
+// 用户亲手关掉面板后，发消息时就不再自动弹出来，等 /pet 再叫
+let isClosedByPerson = false
+// 面板是否真的显示出来了；没显示时桌宠改画在输入框上方
+let isPaneShown = false
+
+function pick(lines: readonly string[]) {
+  return lines[Math.floor(Math.random() * lines.length)] ?? ''
+}
+
+// 把一帧 WebP 包进 SVG：桌面端没有 Image 元素，只能画 Svg
+function svgOf(base64: string) {
+  const href = `data:image/webp;base64,${base64}`
+
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
+    `width="${FRAME_PIXELS}" height="${FRAME_PIXELS}" viewBox="0 0 ${FRAME_PIXELS} ${FRAME_PIXELS}">` +
+    `<image width="${FRAME_PIXELS}" height="${FRAME_PIXELS}" href="${href}" xlink:href="${href}"/>` +
+    `</svg>`
+  )
+}
+
+async function loadFrames($: EngineInterface) {
+  const names = Array.from({ length: FRAME_COUNT }, (_, i) => String(i).padStart(2, '0'))
+  const files = await Promise.all(
+    names.map(name => $.fs.read(`${$.plugin.root}/assets/frames/${name}.webp`, { as: 'bytes' })),
+  )
+  frames = files.map(file => file.base64)
+}
+
+function stopDancing() {
+  ticker?.cancel()
+  ticker = undefined
+}
+
+function startDancing($: EngineInterface) {
+  if (ticker || frames.length === 0 || !isDancing) {
+    return
+  }
+  ticker = $.clock.every(FRAME_MS, () => {
+    frame = (frame + 1) % frames.length
+    $.ui.invalidate('ui.render')
+  })
+}
+
+// 说一句话，过一会儿没新动静就回到发呆状态
+function say($: EngineInterface, text: string) {
+  bubble = text
+  $.ui.invalidate('ui.render')
+  idleTimer?.cancel()
+  idleTimer = $.clock.after(IDLE_AFTER_MS, () => {
+    bubble = pick(IDLE_LINES)
+    $.ui.invalidate('ui.render')
+  })
+}
+
+// 打开面板并记下它有没有真的显示出来；没显示就重画一次，让输入框上方的小桌宠出现
+async function openPane($: EngineInterface) {
+  const opened = await $.ui.open({ id: PANE, title: TITLE })
+  isPaneShown = opened.isPlaced
+  startDancing($)
+  $.ui.invalidate('ui.render')
+
+  return opened
+}
+
+// 插件自己开的面板在窄窗口里会挂起不显示；在用户发消息时再开一次，就算“用户触发”，任何宽度都会显示
+async function showPane($: EngineInterface) {
+  const panes = await $.ui.panes()
+  if (!panes.some(pane => pane.id === PANE && pane.isPlaced)) {
+    await openPane($)
+  }
+}
+
+function toggleDance($: EngineInterface) {
+  isDancing = !isDancing
+  if (isDancing) {
+    startDancing($)
+    say($, '继续跳舞！')
+  } else {
+    stopDancing()
+    frame = 0
+    say($, '休息一下～')
+  }
+}
+
+export const register: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.command.register({
+      name: 'pet',
+      description: '打开桌宠面板',
+    })
+    await loadFrames($)
+    void openPane($)
+
+    return next(e)
+  })
+
+  on('command.run', { command: 'pet' }, async $ => {
+    isClosedByPerson = false
+    const opened = await openPane($)
+    say($, '我来啦！')
+
+    return {
+      text: opened.isPlaced
+        ? '桌宠已经出来啦。'
+        : `桌宠面板没能显示（${opened.reason}），先待在输入框上方陪你。`,
+    }
+  })
+
+  // 面板关掉后停止计时器，不在后台空转
+  on('ui.close', { id: PANE }, ($, e, next) => {
+    stopDancing()
+    isPaneShown = false
+    if (e.origin.kind === 'person') {
+      isClosedByPerson = true
+    }
+
+    return next(e)
+  })
+
+  on('prompt.submit', async ($, e, next) => {
+    if (!isClosedByPerson) {
+      await showPane($)
+    }
+    say($, '收到～让我想想！')
+
+    return next(e)
+  })
+
+  on('tool.call', ($, e, next) => {
+    say($, TOOL_LINES[e.tool] ?? `正在用 ${e.tool}…`)
+
+    return next(e)
+  })
+
+  on('turn.complete', ($, e, next) => {
+    const line =
+      e.reason === 'answer' ? '搞定啦！✨' : e.reason === 'aborted' ? '诶，被打断了…' : '出错了 QAQ'
+    say($, line)
+
+    return next(e)
+  })
+
+  // 面板显示不出来时的后备：在输入框上方画一个小号桌宠
+  on('ui.render', { component: 'AbovePrompt' }, ($, e, next) => {
+    const current = frames[isDancing ? frame : 0]
+    if (isPaneShown || isClosedByPerson || e.props.hasSurvey || e.surface === 'terminal' || current === undefined) {
+      return next(e)
+    }
+    const { Box, Text, Button, Svg } = $.ui.resolve(e)
+
+    return (
+      <Box flexDirection="row" alignItems="center" gap={1}>
+        <Svg source={svgOf(current)} alt="跳舞的桌宠" width={BAND_WIDTH} height={BAND_WIDTH} />
+        <Box flexDirection="column" gap={1}>
+          <Text>{bubble}</Text>
+          <Box flexDirection="row" gap={1}>
+            <Button key="pat" label="摸摸头" onPress={() => say($, pick(PAT_LINES))} />
+            <Button key="dance" label={isDancing ? '休息' : '跳舞'} onPress={() => toggleDance($)} />
+          </Box>
+        </Box>
+      </Box>
+    )
+  })
+
+  on('ui.render', { component: 'Pane', requestId: PANE }, ($, e) => {
+    const { Box, Text, Button } = $.ui.resolve(e)
+
+    const controls = (
+      <Box flexDirection="row" gap={1}>
+        <Button key="pat" label="摸摸头" hotkey="p" onPress={() => say($, pick(PAT_LINES))} />
+        <Button key="dance" label={isDancing ? '休息' : '跳舞'} hotkey="d" onPress={() => toggleDance($)} />
+      </Box>
+    )
+
+    if (e.surface === 'terminal') {
+      return (
+        <Box flexDirection="column" gap={1}>
+          <Text>💬 {bubble}</Text>
+          <Text dimColor>桌宠的动画要在 Claude 桌面端才看得到。</Text>
+          {controls}
+        </Box>
+      )
+    }
+
+    const { Svg } = $.ui.resolve(e)
+    const current = frames[isDancing ? frame : 0]
+    const width = Math.min(MAX_WIDTH, Math.max(120, e.props.bodyColumns * 7))
+
+    return (
+      <Box flexDirection="column" alignItems="center" gap={1}>
+        <Box borderStyle="round" paddingX={1}>
+          <Text>{bubble}</Text>
+        </Box>
+        {current === undefined ? (
+          <Text dimColor>桌宠加载中…</Text>
+        ) : (
+          <Svg source={svgOf(current)} alt="跳舞的桌宠" width={width} height={width} />
+        )}
+        {controls}
+      </Box>
+    )
+  })
+}
