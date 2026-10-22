@@ -43,6 +43,8 @@ const TOOL_LINES: Record<string, string> = {
 let frames: string[] = []
 let ticker: Timer | undefined
 let idleTimer: Timer | undefined
+// 用户亲手关掉面板后，发消息时就不再自动弹出来，等 /pet 再叫
+let isClosedByPerson = false
 
 function pick(lines: readonly string[]) {
   return lines[Math.floor(Math.random() * lines.length)] ?? ''
@@ -91,6 +93,15 @@ async function say($: EngineInterface, text: string) {
   })
 }
 
+// 插件自己开的面板在窄窗口里会挂起不显示；在用户发消息时再开一次，就算“用户触发”，任何宽度都会显示
+async function showPane($: EngineInterface) {
+  const panes = await $.ui.panes()
+  if (!panes.some(pane => pane.id === PANE && pane.isPlaced)) {
+    await $.ui.open({ id: PANE, title: TITLE })
+  }
+  await startDancing($)
+}
+
 async function toggleDance($: EngineInterface) {
   if (await read($, isDancing)) {
     stopDancing()
@@ -118,6 +129,7 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'pet' }, async $ => {
+    isClosedByPerson = false
     await $.ui.open({ id: PANE, title: TITLE })
     await startDancing($)
     await say($, '我来啦！')
@@ -128,11 +140,17 @@ export const register: Register = on => {
   // 面板关掉后停止计时器，不在后台空转
   on('ui.close', { id: PANE }, ($, e, next) => {
     stopDancing()
+    if (e.origin.kind === 'person') {
+      isClosedByPerson = true
+    }
 
     return next(e)
   })
 
   on('prompt.submit', async ($, e, next) => {
+    if (!isClosedByPerson) {
+      await showPane($)
+    }
     await say($, '收到～让我想想！')
 
     return next(e)
