@@ -117,3 +117,33 @@ test('发消息时面板没显示就再打开一次，已经显示就不重复�
   await $.prompt.submit({ ...typed, text: '再来' })
   expect(opens).toBe(2)
 })
+
+test('面板显示不出来时：/pet 说明原因，桌宠改画在输入框上方', async ($, on) => {
+  engine(on, { opensPane: false })
+  on('ui.open', () => ({ value: { isPlaced: false, reason: 'no panes here' } }))
+  on('command.run', () => ({ text: '' }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+
+  const ran = await $.command.run({
+    command: 'pet',
+    args: '',
+    origin: { kind: 'composer' },
+    presentation: { isFullscreen: false, columns: 120 },
+  })
+  expect(JSON.stringify(ran)).toContain('no panes here')
+
+  const band = await $.ui.mount({
+    plugin: 'desktop-pet',
+    component: 'AbovePrompt',
+    requestId: 'band',
+    surface: 'desktop',
+    props: { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80, scroll: { offset: 0, bodyRows: 12 }, view: {} },
+  })
+  expect(await svgSource(band)).toContain('data:image/webp;base64,F')
+  await band.unmount()
+})

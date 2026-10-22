@@ -9,6 +9,8 @@ const FRAME_MS = 90
 // 帧图本身是 240×240，面板里按 CSS 像素缩放显示
 const FRAME_PIXELS = 240
 const MAX_WIDTH = 220
+// 面板显示不出来时，改在输入框上方画一个小号的
+const BAND_WIDTH = 96
 const IDLE_AFTER_MS = 8000
 
 
@@ -45,6 +47,8 @@ let ticker: Timer | undefined
 let idleTimer: Timer | undefined
 // 用户亲手关掉面板后，发消息时就不再自动弹出来，等 /pet 再叫
 let isClosedByPerson = false
+// 面板是否真的显示出来了；没显示时桌宠改画在输入框上方
+let isPaneShown = false
 
 function pick(lines: readonly string[]) {
   return lines[Math.floor(Math.random() * lines.length)] ?? ''
@@ -96,13 +100,22 @@ function say($: EngineInterface, text: string) {
   })
 }
 
+// 打开面板并记下它有没有真的显示出来；没显示就重画一次，让输入框上方的小桌宠出现
+async function openPane($: EngineInterface) {
+  const opened = await $.ui.open({ id: PANE, title: TITLE })
+  isPaneShown = opened.isPlaced
+  startDancing($)
+  $.ui.invalidate('ui.render')
+
+  return opened
+}
+
 // 插件自己开的面板在窄窗口里会挂起不显示；在用户发消息时再开一次，就算“用户触发”，任何宽度都会显示
 async function showPane($: EngineInterface) {
   const panes = await $.ui.panes()
   if (!panes.some(pane => pane.id === PANE && pane.isPlaced)) {
-    await $.ui.open({ id: PANE, title: TITLE })
+    await openPane($)
   }
-  startDancing($)
 }
 
 function toggleDance($: EngineInterface) {
@@ -124,24 +137,27 @@ export const register: Register = on => {
       description: '打开桌宠面板',
     })
     await loadFrames($)
-    void $.ui.open({ id: PANE, title: TITLE })
-    startDancing($)
+    void openPane($)
 
     return next(e)
   })
 
   on('command.run', { command: 'pet' }, async $ => {
     isClosedByPerson = false
-    await $.ui.open({ id: PANE, title: TITLE })
-    startDancing($)
+    const opened = await openPane($)
     say($, '我来啦！')
 
-    return { text: '桌宠已经出来啦。' }
+    return {
+      text: opened.isPlaced
+        ? '桌宠已经出来啦。'
+        : `桌宠面板没能显示（${opened.reason}），先待在输入框上方陪你。`,
+    }
   })
 
   // 面板关掉后停止计时器，不在后台空转
   on('ui.close', { id: PANE }, ($, e, next) => {
     stopDancing()
+    isPaneShown = false
     if (e.origin.kind === 'person') {
       isClosedByPerson = true
     }
@@ -170,6 +186,28 @@ export const register: Register = on => {
     say($, line)
 
     return next(e)
+  })
+
+  // 面板显示不出来时的后备：在输入框上方画一个小号桌宠
+  on('ui.render', { component: 'AbovePrompt' }, ($, e, next) => {
+    const current = frames[isDancing ? frame : 0]
+    if (isPaneShown || isClosedByPerson || e.props.hasSurvey || e.surface === 'terminal' || current === undefined) {
+      return next(e)
+    }
+    const { Box, Text, Button, Svg } = $.ui.resolve(e)
+
+    return (
+      <Box flexDirection="row" alignItems="center" gap={1}>
+        <Svg source={svgOf(current)} alt="跳舞的桌宠" width={BAND_WIDTH} height={BAND_WIDTH} />
+        <Box flexDirection="column" gap={1}>
+          <Text>{bubble}</Text>
+          <Box flexDirection="row" gap={1}>
+            <Button key="pat" label="摸摸头" onPress={() => say($, pick(PAT_LINES))} />
+            <Button key="dance" label={isDancing ? '休息' : '跳舞'} onPress={() => toggleDance($)} />
+          </Box>
+        </Box>
+      </Box>
+    )
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, ($, e) => {
