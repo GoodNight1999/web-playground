@@ -1,0 +1,5 @@
+{
+  "name": "goodnight1999-mods",
+  "owner": { "name": "GoodNight1999" },
+  "plugins": [{ "name": "chat-toc", "source": "./claude-chat-toc" }]
+}
