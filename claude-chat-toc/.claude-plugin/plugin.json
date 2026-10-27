@@ -1,0 +1,7 @@
+{
+  "name": "chat-toc",
+  "version": "0.1.0",
+  "description": "对话目录：在聊天旁的面板里列出每条提问，点一下跳回对应的问答",
+  "types": "./types/index.d.ts",
+  "license": "MIT"
+}
