@@ -13,6 +13,11 @@
 - `npm run lint`：代码检查
 - `npm run build`：类型检查 + 生产构建（输出到 `dist/`）
 
+## 开工前必做（硬性要求）
+- 每次执行任务前，先用项目 skill `task-kickoff`（`.claude/skills/task-kickoff/SKILL.md`）盘点并选择最优的工具、skill、插件，参考已有的优质项目和官方文档，再制定方案。
+- 调研深度按任务大小来：小改动快速盘点即可，新功能/新依赖/改架构要充分搜索并先给方案。
+- 开工前在回复里简要说明选了什么工具、参考了什么、怎么验证。
+
 ## 工作规则
 - 提交前必须跑 `npm run lint` 和 `npm run build`，都通过才能提交。
 - 样式优先用 Tailwind 工具类，不要新建零散的 CSS 文件。
